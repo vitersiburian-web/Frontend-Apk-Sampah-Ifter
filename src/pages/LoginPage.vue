@@ -1,26 +1,36 @@
 <template>
   <div class="login-page">
     <div class="bg-pattern"></div>
-    
+
     <div class="content">
-      <h1 class="title">Suraja<br>Peduli Sampah.</h1>
-      
+      <h1 class="title">Suraja<br />Peduli Sampah.</h1>
+
       <q-card class="login-card">
         <h3>Masuk</h3>
-        
-        <q-input v-model="email" outlined placeholder="Email" class="mb">
+
+        <q-input v-model="email" outlined placeholder="Username" class="mb">
           <template v-slot:prepend><q-icon name="mail" /></template>
         </q-input>
-        
-        <q-input v-model="password" outlined :type="showPwd ? 'text' : 'password'" placeholder="Kata Sandi" class="mb">
+
+        <q-input
+          v-model="password"
+          outlined
+          :type="showPwd ? 'text' : 'password'"
+          placeholder="Kata Sandi"
+          class="mb"
+        >
           <template v-slot:prepend><q-icon name="lock" /></template>
           <template v-slot:append>
-            <q-icon :name="showPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="showPwd = !showPwd" />
+            <q-icon
+              :name="showPwd ? 'visibility_off' : 'visibility'"
+              class="cursor-pointer"
+              @click="showPwd = !showPwd"
+            />
           </template>
         </q-input>
-        
+
         <div class="text-right mb"><span class="link" @click="lupaSandi">Lupa Sandi?</span></div>
-        
+
         <q-btn label="Masuk" class="btn-login" unelevated no-caps @click="handleLogin" />
       </q-card>
     </div>
@@ -30,37 +40,46 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
-const router = useRouter()
+// deklarasi variabel reaktif
 const email = ref('')
 const password = ref('')
 const showPwd = ref(false)
 
-const users = [
-  { email: 'admin.com', password: 'admin123', role: 'admin' },
-  { email: 'petugas.com', password: 'petugas123', role: 'petugas' },
-  { email: 'user.com', password: 'user123', role: 'user' }
-]
+// deklarasi router
+const router = useRouter()
 
-const handleLogin = () => {
-  const user = users.find(u => u.email === email.value && u.password === password.value)
-  
-  if (!user) {
+const handleLogin = async () => {
+  try {
+    const response = await axios.post('http://localhost:5000/api/auth/login', {
+      username: email.value, // sesuai key Flask
+      password: password.value,
+    })
+
+    const token = response.data.token
+    localStorage.setItem('token', token)
+
+    // decode token untuk ambil username & role
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    localStorage.setItem('username', payload.username)
+    localStorage.setItem('user_id', payload.id)
+    localStorage.setItem('role', payload.role) // simpan role juga
+
+    const role = payload.role // ambil role dari token
+
+    if (role === 'admin') {
+      router.push('/admin')
+    } else if (role === 'petugas') {
+      router.push('/petugas')
+    } else {
+      router.push('/user')
+    }
+  } catch (err) {
+    console.error(err)
     alert('Email atau kata sandi salah!')
-    return
-  }
-
-  // Langsung arahkan tanpa popup
-  if (user.role === 'admin') {
-    router.push('/admin')
-  } else if (user.role === 'petugas') {
-    router.push('/petugas')
-  } else {
-    router.push('/user')
   }
 }
-
-const lupaSandi = () => alert('Hubungi admin untuk reset sandi.')
 </script>
 
 <style scoped>
@@ -79,7 +98,7 @@ const lupaSandi = () => alert('Hubungi admin untuk reset sandi.')
   position: absolute;
   width: 100%;
   height: 100%;
-  background: 
+  background:
     radial-gradient(circle at 10% 20%, rgba(255, 193, 7, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 90% 10%, rgba(0, 229, 255, 0.2) 0%, transparent 50%),
     radial-gradient(circle at 80% 80%, rgba(255, 193, 7, 0.1) 0%, transparent 40%);
@@ -96,7 +115,7 @@ const lupaSandi = () => alert('Hubungi admin untuk reset sandi.')
 .title {
   font-size: 48px;
   font-weight: 800;
-  color: #FFC107;
+  color: #ffc107;
   margin: 0 0 48px 0;
   line-height: 1.1;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
@@ -117,7 +136,9 @@ const lupaSandi = () => alert('Hubungi admin untuk reset sandi.')
   margin: 0 0 24px 0;
 }
 
-.mb { margin-bottom: 16px; }
+.mb {
+  margin-bottom: 16px;
+}
 
 .login-card :deep(.q-field__control) {
   border-radius: 12px;
@@ -125,13 +146,15 @@ const lupaSandi = () => alert('Hubungi admin untuk reset sandi.')
 }
 
 .link {
-  color: #00BCD4;
+  color: #00bcd4;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
 }
 
-.link:hover { text-decoration: underline; }
+.link:hover {
+  text-decoration: underline;
+}
 
 .btn-login {
   width: 100%;
@@ -145,6 +168,8 @@ const lupaSandi = () => alert('Hubungi admin untuk reset sandi.')
 }
 
 @media (max-width: 600px) {
-  .title { font-size: 40px; }
+  .title {
+    font-size: 40px;
+  }
 }
 </style>
