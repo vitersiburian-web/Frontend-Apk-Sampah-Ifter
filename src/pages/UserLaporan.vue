@@ -1,43 +1,22 @@
 <template>
   <q-page padding>
-    
-    <h4 class="text-h4 text-dark-green q-my-md q-ml-sm">Laporan</h4>
-    <h5 class="text-h5 text-dark-green q-my-sm q-ml-sm">Halo, My Warga 😘🤗</h5>
+    <h4 class="text-h4 text-dark-green q-my-md q-ml-sm">Ajukan Pengambilan</h4>
+    <p class="text-body1 text-dark-green q-my-sm q-ml-sm">
+      Mengajukan pengambilan sampah kepada petugas, pastikan sampah sudha dipilah
+    </p>
 
     <q-form @submit.prevent="onSubmit" class="q-gutter-md q-mt-lg">
-      
       <div>
-        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">Jadwal Pengambilan Sampah</label>
+        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">
+          Jadwal Pengambilan Sampah
+        </label>
         <q-input
-          v-model="jadwal"
           outlined
-          placeholder="Pilih Tanggal dan Waktu"
-          class="q-mt-xs form-input"
-          dense
           readonly
-          :rules="[val => !!val || 'Jadwal tidak boleh kosong']"
-        >
-          <template v-slot:append>
-            <q-icon name="event" class="cursor-pointer icon-green">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date v-model="jadwal" mask="YYYY-MM-DD HH:mm">
-                  <div class="row items-center justify-end">
-                    <q-btn v-close-popup label="Tutup" color="primary" flat />
-                  </div>
-                </q-date>
-              </q-popup-proxy>
-            </q-icon>
-            <q-icon name="access_time" class="cursor-pointer icon-green">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-time v-model="jadwal" mask="YYYY-MM-DD HH:mm" format24h>
-                  <div class="row items-center justify-end">
-                    <q-btn v-close-popup label="Tutup" color="primary" flat />
-                  </div>
-                </q-time>
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
+          :value="jadwalDisplay"
+          :placeholder="jadwalDisplay"
+          class="q-mt-xs form-input"
+        />
       </div>
 
       <div>
@@ -49,7 +28,44 @@
           placeholder="Pilih Jenis Sampah"
           class="q-mt-xs form-input"
           dense
-          :rules="[val => !!val || 'Jenis sampah tidak boleh kosong']"
+          :rules="[(val) => !!val || 'Jenis sampah tidak boleh kosong']"
+        />
+      </div>
+
+      <!-- Jumlah Karung -->
+      <div>
+        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium"> Jumlah Karung </label>
+
+        <q-input
+          v-model.number="jumlahKarung"
+          type="number"
+          outlined
+          dense
+          min="1"
+          class="q-mt-xs form-input"
+          placeholder="Masukkan jumlah karung"
+        >
+          <template v-slot:append>
+            <q-btn flat dense icon="remove" @click="jumlahKarung > 1 ? jumlahKarung-- : null" />
+            <q-btn flat dense icon="add" @click="jumlahKarung++" />
+          </template>
+        </q-input>
+        <div class="text-caption text-dark-green q-mt-xs q-ml-sm">
+          Harga per karung: {{ formatRupiah(hargaPerKarung) }}
+        </div>
+      </div>
+
+      <!-- Total Harga -->
+      <div class="q-mt-sm">
+        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">
+          Total Pembayaran
+        </label>
+        <q-input
+          outlined
+          dense
+          readonly
+          :model-value="formatRupiah(totalPembayaran)"
+          class="q-mt-xs form-input"
         />
       </div>
 
@@ -61,41 +77,91 @@
         rounded
         no-caps
       />
-
     </q-form>
 
     <!-- Dialog Konfirmasi -->
     <q-dialog v-model="confirmDialog" persistent>
       <q-card class="confirm-card">
+        <!-- Header Icon + Judul -->
         <q-card-section class="text-center q-pt-lg">
           <q-icon name="help_outline" size="64px" class="icon-green" />
+
           <div class="text-h6 text-weight-bold text-dark-green q-mt-md">
             Ajukan Pengambilan Sampah?
           </div>
+
           <div class="text-body2 text-grey-7 q-mt-sm q-px-md">
             Pastikan data yang Anda masukkan sudah benar
           </div>
-          
-          <!-- Preview Data -->
-          <q-card flat bordered class="preview-box q-mt-md q-mx-md">
-            <q-card-section class="q-pa-md text-left">
+        </q-card-section>
+
+        <!-- Preview Data -->
+        <q-card-section>
+          <q-card flat bordered class="preview-box q-mt-md">
+            <q-card-section class="q-pa-md">
+              <!-- Jadwal -->
               <div class="q-mb-sm">
                 <div class="text-caption text-grey-7">Jadwal</div>
                 <div class="text-body2 text-weight-bold text-dark-green">
-                  {{ formatJadwal(jadwal) }}
+                  {{ jadwalDisplay }}
                 </div>
               </div>
               <q-separator class="q-my-sm" />
-              <div>
+
+              <!-- Jenis Sampah -->
+              <div class="q-mb-sm">
                 <div class="text-caption text-grey-7">Jenis Sampah</div>
                 <div class="text-body2 text-weight-bold text-dark-green">
                   {{ jenisSampah }}
+                </div>
+              </div>
+              <q-separator class="q-my-sm" />
+
+              <!-- Jumlah Karung -->
+              <div class="q-mb-sm">
+                <div class="text-caption text-grey-7">Jumlah Karung</div>
+                <div class="text-body2 text-weight-bold text-dark-green">
+                  {{ jumlahKarung }} karung
+                </div>
+              </div>
+              <q-separator class="q-my-sm" />
+
+              <!-- Total Pembayaran -->
+              <div>
+                <div class="text-caption text-grey-7">Total Pembayaran</div>
+                <div class="text-body2 text-weight-bold text-dark-green">
+                  {{ formatRupiah(totalPembayaran) }}
                 </div>
               </div>
             </q-card-section>
           </q-card>
         </q-card-section>
 
+        <!-- Metode Pembayaran -->
+        <q-card-section>
+          <div class="text-caption text-grey-7 q-mb-sm">Metode Pembayaran</div>
+
+          <q-option-group
+            v-model="metodePembayaran"
+            :options="[
+              { label: 'Cash', value: 'cash' },
+              { label: 'QRIS', value: 'qris' },
+            ]"
+            color="primary"
+          />
+
+          <!-- Jika pilih QRIS -->
+          <div v-if="metodePembayaran === 'qris'" class="text-center q-mt-md">
+            <img src="../assets/qris-example.jpg" alt="QRIS" style="width: 180px" />
+            <div class="text-grey-7 q-mt-sm">
+              Silakan scan QRIS dan lakukan pembayaran sebesar <br />{{
+                formatRupiah(totalPembayaran)
+              }}
+            </div>
+          </div>
+        </q-card-section>
+
+        <!-- Buttons -->
         <q-card-actions class="q-px-md q-pb-lg q-pt-none q-gutter-sm">
           <q-btn
             label="Batal"
@@ -106,8 +172,19 @@
             no-caps
             v-close-popup
           />
+
           <q-btn
+            v-if="metodePembayaran === 'cash'"
             label="Ya, Ajukan"
+            class="full-width confirm-btn"
+            rounded
+            no-caps
+            @click="submitPengajuan"
+          />
+
+          <q-btn
+            v-if="metodePembayaran === 'qris'"
+            label="Sudah Bayar"
             class="full-width confirm-btn"
             rounded
             no-caps
@@ -124,13 +201,11 @@
           <div class="success-icon-wrapper q-mb-md">
             <q-icon name="check_circle" size="80px" color="positive" class="success-icon" />
           </div>
-          <div class="text-h5 text-weight-bold text-dark-green q-mb-sm">
-            Pengajuan Berhasil!
-          </div>
+          <div class="text-h5 text-weight-bold text-dark-green q-mb-sm">Pengajuan Berhasil!</div>
           <div class="text-body1 text-grey-7 q-px-md">
             Pengajuan pengambilan sampah Anda telah diterima
           </div>
-          
+
           <q-card flat bordered class="info-box q-mt-lg q-mx-md">
             <q-card-section class="q-pa-md">
               <div class="row items-center q-gutter-sm q-mb-sm">
@@ -143,6 +218,14 @@
               <div class="text-body2 text-dark-green">
                 <strong>Jenis:</strong> {{ jenisSampah }}
               </div>
+              <div class="text-body2 text-dark-green q-mb-xs">
+                <strong>Jumlah Karung:</strong> {{ jumlahKarung }}
+              </div>
+
+              <div class="text-body2 text-dark-green q-mb-xs">
+                <strong>Total Pembayaran:</strong> {{ formatRupiah(totalPembayaran) }}
+              </div>
+
               <q-separator class="q-my-sm" />
               <div class="text-body2 text-weight-bold text-orange q-mt-sm">
                 Status: Menunggu Konfirmasi
@@ -171,16 +254,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 // Import store kita
 import { setPengajuan } from 'src/stores/laporanStore'
+import axios from 'axios'
 
 const $q = useQuasar()
 const router = useRouter()
 const jadwal = ref('')
 const jenisSampah = ref('')
+const metodePembayaran = ref('cash')
+const jadwalDisplay = ref('Memuat jadwal...')
 
 // Options untuk jenis sampah
 const jenisSampahOptions = [
@@ -191,7 +277,7 @@ const jenisSampahOptions = [
   'Plastik',
   'Logam',
   'Kaca',
-  'Elektronik'
+  'Elektronik',
 ]
 
 // Dialog states
@@ -201,25 +287,88 @@ const successDialog = ref(false)
 // Format jadwal untuk ditampilkan
 const formatJadwal = (dateString) => {
   if (!dateString) return '-'
-  
+
   try {
     const [datePart, timePart] = dateString.split(' ')
     const [year, month, day] = datePart.split('-')
-    
+
     const monthNames = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ]
-    
+
     const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
     const date = new Date(year, month - 1, day)
     const dayName = dayNames[date.getDay()]
-    
+
     return `${dayName}, ${day} ${monthNames[month - 1]} ${year}${timePart ? ' • ' + timePart + ' WIB' : ''}`
   } catch {
     return dateString
   }
 }
+
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+onMounted(async () => {
+  const idJadwal = route.query.id_jadwal
+  if (!idJadwal) {
+    jadwalDisplay.value = 'Jadwal tidak tersedia'
+    return
+  }
+
+  try {
+    const res = await axios.get(`http://localhost:5000/api/jadwal/${idJadwal}`)
+    if (res.data.success && res.data.data) {
+      const j = res.data.data
+
+      // Set jadwal.value supaya nanti bisa dikirim
+      jadwal.value = `${j.tanggal} ${j.jam_mulai}`
+
+      const dateObj = new Date(j.tanggal)
+      const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+      const monthNames = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
+      ]
+
+      const dayName = dayNames[dateObj.getDay()]
+      const day = dateObj.getDate()
+      const month = dateObj.getMonth()
+      const year = dateObj.getFullYear()
+      const jamMulai = j.jam_mulai.slice(0, 5)
+      const jamSelesai = j.jam_selesai.slice(0, 5)
+
+      jadwalDisplay.value = `${dayName}, ${day} ${monthNames[month]} ${year} • ${jamMulai} - ${jamSelesai} WIB`
+    } else {
+      jadwalDisplay.value = 'Jadwal tidak ditemukan'
+    }
+  } catch (err) {
+    console.error(err)
+    jadwalDisplay.value = 'Gagal memuat jadwal'
+  }
+})
 
 const onSubmit = () => {
   // Validasi form
@@ -228,29 +377,36 @@ const onSubmit = () => {
       type: 'negative',
       message: 'Mohon lengkapi semua data',
       position: 'top',
-      timeout: 2000
+      timeout: 2000,
     })
     return
   }
-  
+
   confirmDialog.value = true
 }
 
 const submitPengajuan = () => {
   confirmDialog.value = false
-  
+
   // Simulasi loading
   $q.loading.show({
     message: 'Mengirim pengajuan...',
-    spinnerColor: 'primary'
+    spinnerColor: 'primary',
   })
-  
+
   setTimeout(() => {
     // 1. Simpan data ke store
-    setPengajuan(jadwal.value, jenisSampah.value)
-    
+    setPengajuan({
+      jadwal: jadwal.value,
+      jenisSampah: jenisSampah.value,
+      jumlahKarung: jumlahKarung.value,
+      hargaPerKarung: hargaPerKarung.value,
+      totalPembayaran: totalPembayaran.value,
+      metodePembayaran: metodePembayaran.value,
+    })
+
     $q.loading.hide()
-    
+
     // 2. Tampilkan Success Dialog
     successDialog.value = true
   }, 1500)
@@ -264,12 +420,22 @@ const closeSuccessDialog = () => {
   // 3. Redirect ke Dashboard
   router.push({ name: 'UserDashboard' })
 }
+const jumlahKarung = ref(0)
+const hargaPerKarung = ref(5000)
+
+const totalPembayaran = computed(() => {
+  return jumlahKarung.value * hargaPerKarung.value
+})
+
+const formatRupiah = (value) => {
+  return 'Rp ' + value.toLocaleString('id-ID')
+}
 </script>
 
 <style lang="scss" scoped>
-$dark-green: #08602E;
+$dark-green: #08602e;
 $dark-green-hover: #06481f;
-$yellow-accent: #FFD155;
+$yellow-accent: #ffd155;
 
 .text-dark-green {
   color: $dark-green;
@@ -284,7 +450,7 @@ $yellow-accent: #FFD155;
   color: $dark-green !important;
   font-weight: 700;
   transition: all 0.3s ease;
-  
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(255, 209, 85, 0.4);
@@ -296,11 +462,11 @@ $yellow-accent: #FFD155;
     border-radius: 12px;
     color: $dark-green;
   }
-  
+
   :deep(.q-field__native) {
     color: $dark-green;
   }
-  
+
   :deep(.q-field__label) {
     color: $dark-green;
   }
@@ -350,7 +516,7 @@ $yellow-accent: #FFD155;
   color: white !important;
   font-weight: 700;
   transition: all 0.3s ease;
-  
+
   &:hover {
     background-color: $dark-green-hover !important;
   }
@@ -373,6 +539,6 @@ $yellow-accent: #FFD155;
 
 // Color utilities
 .text-orange {
-  color: #FF9800;
+  color: #ff9800;
 }
 </style>

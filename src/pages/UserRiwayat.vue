@@ -2,158 +2,199 @@
   <q-page class="bg-grey-2">
     <div class="q-pa-md">
       <!-- Header -->
-      <div class="text-h5 text-weight-bold q-mb-md text-dark-green">
-        Riwayat Pengambilan Sampah
-      </div>
+      <div class="text-h5 text-weight-bold q-mb-md text-dark-green">Riwayat Pengambilan Sampah</div>
 
-      <!-- Filter Periode -->
-      <div class="row q-mb-md">
-        <div class="col">
-          <q-btn-toggle
-            v-model="periode"
-            toggle-color="primary"
-            :options="[
-              { label: 'April 2025', value: 'april' },
-              { label: 'Mei 2025', value: 'mei' }
-            ]"
-            unelevated
-            spread
-            class="periode-toggle"
-          />
+      <!-- Dropdown Pilih Bulan -->
+      <q-select
+        v-model="bulanDipilih"
+        :options="opsiBulan"
+        label="Pilih Bulan"
+        filled
+        dense
+        emit-value
+        map-options
+        clearable
+        use-chips
+        class="q-mb-lg shadow-1 rounded-lg"
+        :popup-content-style="{ maxHeight: '260px' }"
+      >
+        <template v-slot:prepend>
+          <q-icon name="event" color="primary" />
+        </template>
+
+        <template v-slot:option="scope">
+          <q-item v-bind="scope.itemProps">
+            <q-item-section>
+              <q-item-label class="text-weight-medium">
+                {{ scope.opt.label }}
+              </q-item-label>
+            </q-item-section>
+
+            <q-item-section side v-if="bulanAdaRiwayat.has(scope.opt.value)">
+              <q-icon name="check_circle" color="green" />
+            </q-item-section>
+          </q-item>
+        </template>
+      </q-select>
+
+      <!-- List Riwayat -->
+      <div v-if="riwayatTerseleksi.length > 0">
+        <div class="text-subtitle1 text-weight-bold q-mb-sm">
+          {{ tampilJudulBulan }}
         </div>
-      </div>
 
-      <!-- Riwayat List April 2025 -->
-      <div v-if="periode === 'april'">
-        <div class="text-subtitle1 text-weight-bold q-mb-sm">April 2025</div>
-        
-        <q-card flat class="riwayat-card q-mb-md">
+        <q-card v-for="item in riwayatTerseleksi" :key="item.id" flat class="riwayat-card q-mb-md">
           <q-card-section class="row items-center">
             <div class="col-auto">
-              <q-icon name="check_circle" color="green" size="32px" />
+              <q-icon
+                :name="item.status === 'selesai' ? 'check_circle' : 'warning'"
+                :color="item.status === 'selesai' ? 'green' : 'orange'"
+                size="32px"
+              />
             </div>
-            <div class="col q-ml-md">
-              <div class="text-subtitle2 text-weight-bold">
-                Pengambilan selesai
-              </div>
-              <div class="text-caption text-grey-7">
-                Selasa, 15 April · 2 Karung
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
 
-        <q-card flat class="riwayat-card q-mb-md">
-          <q-card-section class="row items-center">
-            <div class="col-auto">
-              <q-icon name="check_circle" color="green" size="32px" />
-            </div>
             <div class="col q-ml-md">
               <div class="text-subtitle2 text-weight-bold">
-                Pengambilan selesai
+                {{ item.status === 'selesai' ? 'Pengambilan selesai' : 'Pengambilan tertunda' }}
               </div>
-              <div class="text-caption text-grey-7">
-                Selasa, 8 April · 1 Karung
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
 
-        <q-card flat class="riwayat-card q-mb-md">
-          <q-card-section class="row items-center">
-            <div class="col-auto">
-              <q-icon name="check_circle" color="green" size="32px" />
-            </div>
-            <div class="col q-ml-md">
-              <div class="text-subtitle2 text-weight-bold">
-                Pengambilan selesai
-              </div>
               <div class="text-caption text-grey-7">
-                Senin, 8 April · 1 Karung
+                {{ formatTanggal(item.tanggal) }} · {{ item.jumlah_karung }} Karung
               </div>
             </div>
           </q-card-section>
         </q-card>
       </div>
 
-      <!-- Riwayat List Mei 2025 -->
-      <div v-if="periode === 'mei'">
-        <div class="text-subtitle1 text-weight-bold q-mb-sm">Mei 2025</div>
-        
-        <q-card flat class="riwayat-card q-mb-md">
-          <q-card-section class="row items-center">
-            <div class="col-auto">
-              <q-icon name="check_circle" color="green" size="32px" />
-            </div>
-            <div class="col q-ml-md">
-              <div class="text-subtitle2 text-weight-bold">
-                Pengambilan selesai
-              </div>
-              <div class="text-caption text-grey-7">
-                Senin, 8 April · 3 Karung
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-
-        <q-card flat class="riwayat-card q-mb-md">
-          <q-card-section class="row items-center">
-            <div class="col-auto">
-              <q-icon name="warning" color="orange" size="32px" />
-            </div>
-            <div class="col q-ml-md">
-              <div class="text-subtitle2 text-weight-bold">
-                Pengambilan tertunda
-              </div>
-              <div class="text-caption text-grey-7">
-                Senin, 8 April · 1 Karung
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-
-        <q-card flat class="riwayat-card q-mb-md">
-          <q-card-section class="row items-center">
-            <div class="col-auto">
-              <q-icon name="check_circle" color="green" size="32px" />
-            </div>
-            <div class="col q-ml-md">
-              <div class="text-subtitle2 text-weight-bold">
-                Pengambilan selesai
-              </div>
-              <div class="text-caption text-grey-7">
-                Senin, 8 April · 2 Karung
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
+      <!-- Jika tidak ada data -->
+      <div v-else class="text-center text-grey-6 q-mt-xl">Tidak ada riwayat untuk bulan ini.</div>
     </div>
   </q-page>
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { api } from 'boot/axios'
 
 export default {
   name: 'UserRiwayat',
+
   setup() {
-    const periode = ref('april')
+    const bulanDipilih = ref(null)
+    const opsiBulan = ref([])
+    const semuaRiwayat = ref([])
+    const bulanAdaRiwayat = new Set()
+
+    /* Generate dropdown 12 bulan */
+    const generate12Bulan = (tahun) => {
+      const namaBulan = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
+      ]
+
+      return namaBulan.map((b, index) => {
+        const bulan = String(index + 1).padStart(2, '0')
+        return { label: `${b} ${tahun}`, value: `${tahun}-${bulan}` }
+      })
+    }
+
+    /* Fetch data dari backend */
+    const loadRiwayat = async () => {
+      try {
+        const id_user = localStorage.getItem('user_id')
+        const warga = await api.get(`/warga/by-user/${id_user}`)
+        const id_warga = warga.data.data.id
+
+        const riwayat = await api.get('/riwayat', { params: { id_warga } })
+        semuaRiwayat.value = riwayat.data.data
+
+        if (semuaRiwayat.value.length > 0) {
+          const tahunPertama = new Date(semuaRiwayat.value[0].tanggal).getFullYear()
+
+          opsiBulan.value = generate12Bulan(tahunPertama)
+
+          semuaRiwayat.value.forEach((item) => {
+            const d = new Date(item.tanggal)
+            const bulan = String(d.getMonth() + 1).padStart(2, '0')
+            const tahun = d.getFullYear()
+            bulanAdaRiwayat.add(`${tahun}-${bulan}`)
+          })
+
+          const bulanNow = String(new Date().getMonth() + 1).padStart(2, '0')
+          bulanDipilih.value = `${tahunPertama}-${bulanNow}`
+        }
+      } catch (err) {
+        console.error('Gagal mengambil riwayat:', err)
+      }
+    }
+
+    const riwayatTerseleksi = computed(() => {
+      if (!bulanDipilih.value) return []
+      return semuaRiwayat.value.filter((item) => {
+        const d = new Date(item.tanggal)
+        const bulan = String(d.getMonth() + 1).padStart(2, '0')
+        const tahun = d.getFullYear()
+        return `${tahun}-${bulan}` === bulanDipilih.value
+      })
+    })
+
+    const tampilJudulBulan = computed(() => {
+      if (!bulanDipilih.value) return ''
+      const [tahun, bulan] = bulanDipilih.value.split('-')
+      const namaBulan = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
+      ]
+      return `${namaBulan[Number(bulan) - 1]} ${tahun}`
+    })
+
+    const formatTanggal = (tanggal) => {
+      const d = new Date(tanggal)
+      const hari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+      return `${hari[d.getDay()]}, ${d.getDate()}`
+    }
+
+    onMounted(loadRiwayat)
 
     return {
-      periode
+      bulanDipilih,
+      opsiBulan,
+      riwayatTerseleksi,
+      tampilJudulBulan,
+      formatTanggal,
+      bulanAdaRiwayat,
     }
-  }
+  },
 }
 </script>
 
 <style scoped>
-.riwayat-card {
-  border-radius: 12px;
-  border-left: 4px solid #4CAF50;
+.q-select {
+  border-radius: 12px !important;
 }
 
-.periode-toggle {
+.riwayat-card {
   border-radius: 12px;
+  border-left: 4px solid #4caf50;
 }
 </style>
