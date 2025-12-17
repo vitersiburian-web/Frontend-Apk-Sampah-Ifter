@@ -24,29 +24,35 @@
         indicator-color="transparent" 
         class="text-grey-7" 
         align="justify"
+        dense
       >
         <q-route-tab
           to="/admin"
           icon="home"
-          label="Dashboard"
+          label="Home"
           exact
         />
         <q-route-tab
           to="/admin/data"
           icon="manage_accounts"
           label="Data"
+        />
+        <q-route-tab
+          to="/admin/tambah-jadwal"
+          icon="event_note"
+          label="Jadwal"
           exact
         />
         <q-route-tab
           to="/admin/keuangan"
           icon="account_balance_wallet"
-          label="Keuangan"
+          label="Cuan"
           exact
         />
         <q-route-tab
           to="/admin/riwayat"
           icon="history"
-          label="Riwayat"
+          label="Log"
           exact
         />
       </q-tabs>
@@ -66,10 +72,13 @@ const route = useRoute();
 const rightDrawerOpen = ref(false);
 
 const currentRouteTitle = computed(() => {
+    // Ambil judul dari meta route
     const title = route.meta.title;
     if (title) return title;
     
+    // Fallback deteksi manual
     if (route.path.startsWith('/admin/data')) return 'Data Manajemen';
+    if (route.path === '/admin/tambah-jadwal') return 'Jadwal Pengambilan';
     if (route.path === '/admin/keuangan') return 'Keuangan';
     if (route.path === '/admin/riwayat') return 'Riwayat';
     return 'Dashboard Admin';
@@ -93,5 +102,11 @@ const toggleDrawer = () => {
 }
 .q-tabs .q-route-tab--active {
   color: #006837 !important;
+}
+/* Menyesuaikan font tab agar tidak tumpang tindih karena ada 5 item */
+:deep(.q-tab__label) {
+  font-size: 9px;
+  font-weight: 700;
+  margin-top: 2px;
 }
 </style>
