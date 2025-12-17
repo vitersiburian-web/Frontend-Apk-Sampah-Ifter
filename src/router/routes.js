@@ -2,6 +2,8 @@
 const SplashPage = () => import('pages/SplashPage.vue')
 const LoginPage = () => import('pages/LoginPage.vue')
 const ErrorNotFound = () => import('pages/ErrorNotFound.vue')
+
+// Import halaman Laporan Admin yang baru dibuat (Wajib ada file FormLaporanAdmin.vue di folder pages)
 const FormLaporanAdmin = () => import('pages/FormLaporanAdmin.vue') 
 
 // Import Layouts
@@ -32,7 +34,6 @@ const KeuanganAdmin = () => import('pages/KeuanganAdmin.vue')
 const RiwayatAdmin = () => import('pages/RiwayatAdmin.vue')
 const TambahUser = () => import('pages/TambahUser.vue')
 const TambahPetugas = () => import('pages/TambahPetugas.vue')
-const TambahJadwal = () => import('pages/TambahJadwal.vue')
 
 export default [
   // Landing/Splash Page
@@ -49,7 +50,7 @@ export default [
     name: 'Login'
   },
   
-  // Rute Laporan Masalah (Akses tanpa login)
+  // Rute Laporan Masalah (Dapat diakses tanpa login)
   {
     path: '/lapor-admin',
     component: FormLaporanAdmin,
@@ -57,7 +58,7 @@ export default [
     meta: { title: 'Laporan Masalah' }
   },
 
-  // Admin Routes (Grup rute untuk Admin)
+  // Admin Routes
   {
     path: '/admin',
     component: AdminLayout,
@@ -66,9 +67,9 @@ export default [
       {
         path: '', 
         component: AdminDashboard,
-        name: 'AdminDashboard',
-        meta: { title: 'Dashboard Admin' }
+        name: 'AdminDashboard'
       },
+      // Rute Data Management
       {
         path: 'data', 
         redirect: { name: 'DataPetugas' },
@@ -86,13 +87,6 @@ export default [
         name: 'DataUser',
         meta: { title: 'Data User' }
       },
-      // HALAMAN JADWAL (Navigasi ke-3)
-      {
-        path: 'tambah-jadwal', 
-        component: TambahJadwal,
-        name: 'TambahJadwal',
-        meta: { title: 'Jadwal Pengambilan' }
-      },
       {
         path: 'keuangan', 
         component: KeuanganAdmin,
@@ -105,7 +99,7 @@ export default [
         name: 'RiwayatAdmin',
         meta: { title: 'Riwayat' }
       },
-      // Form Tambahan
+      // Rute CRUD Form
       {
         path: 'tambah-user', 
         component: TambahUser,
@@ -142,10 +136,10 @@ export default [
     children: [
       { path: '', redirect: { name: 'UserDashboard' } },
       { path: 'dashboard', component: UserDashboard, name: 'UserDashboard', meta: { title: 'Dashboard' } },
-      { path: 'laporan', component: UserLaporan, name: 'UserLaporan', meta: { title: 'Laporan Pengambilan' } },
+      { path: 'laporan', component: UserLaporan, name: 'UserLaporan', meta: { title: 'Laporan Pengambilan Sampah' } },
       { path: 'maps', component: UserMaps, name: 'UserMaps', meta: { title: 'Peta Lokasi' } },
       { path: 'notifikasi', component: UserNotifikasi, name: 'UserNotifikasi', meta: { title: 'Notifikasi' } },
-      { path: 'riwayat', component: UserRiwayat, name: 'UserRiwayat', meta: { title: 'Riwayat' } }
+      { path: 'riwayat', component: UserRiwayat, name: 'UserRiwayat', meta: { title: 'Riwayat Pengambilan' } }
     ]
   },
 
