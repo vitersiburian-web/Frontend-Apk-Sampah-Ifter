@@ -39,40 +39,78 @@
       </q-input>
     </div>
 
-    <q-list separator class="data-list">
-      <q-item-label header class="text-weight-bold text-grey-8"
-        >Daftar User ({{ filteredUsers.length }})</q-item-label
-      >
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center q-py-lg">
+      <q-spinner color="primary" size="2em" />
+      <div class="text-grey-7 q-mt-sm">Memuat data...</div>
+    </div>
 
-      <q-item v-for="user in filteredUsers" :key="user.id" class="q-py-md bg-white data-item">
-        <q-item-section avatar>
-          <q-icon name="person" color="grey-8" size="sm" />
-        </q-item-section>
+    <!-- Data List -->
+    <q-card class="data-card" v-else>
+      <q-card-section class="q-pb-none">
+        <div class="text-weight-bold text-grey-8">Daftar User ({{ filteredUsers.length }})</div>
+      </q-card-section>
 
-        <q-item-section>
-          <q-item-label class="text-weight-bold text-dark text-lg">{{ user.name }}</q-item-label>
-          <q-item-label caption>{{ user.address }}</q-item-label>
-          <q-item-label caption>{{ user.phone }}</q-item-label>
-        </q-item-section>
+      <q-separator />
 
-        <q-item-section side>
-          <q-btn
-            icon="edit"
-            size="sm"
-            flat
-            color="blue"
-            dense
-            @click="editItem(user)"
-            class="q-mb-xs"
-          />
-          <q-btn icon="delete" size="sm" flat color="red" dense @click="deleteItem(user.id)" />
-        </q-item-section>
-      </q-item>
+      <q-card-section>
+        <q-list separator class="q-mt-sm">
+          <q-item
+            v-for="user in filteredUsers"
+            :key="user.id"
+            class="q-py-md data-item"
+            clickable
+            v-ripple
+          >
+            <q-item-section avatar>
+              <q-avatar color="grey-1" text-color="grey-8" size="md">
+                <q-icon name="person" />
+              </q-avatar>
+            </q-item-section>
 
-      <q-item v-if="filteredUsers.length === 0" class="text-center text-grey-5 q-py-lg">
-        <q-item-section>Tidak ada data user yang ditemukan.</q-item-section>
-      </q-item>
-    </q-list>
+            <q-item-section>
+              <q-item-label class="text-weight-bold text-dark">
+                {{ user.nama_warga }}
+              </q-item-label>
+              <q-item-label caption class="text-grey-7">
+                <q-icon name="location_on" size="12px" class="q-mr-xs" />
+                {{ user.alamat || '-' }}
+              </q-item-label>
+              <q-item-label caption class="text-grey-7 q-mt-xs">
+                <q-icon name="phone" size="12px" class="q-mr-xs" />
+                {{ user.no_telp || '-' }}
+              </q-item-label>
+            </q-item-section>
+
+            <q-item-section side top>
+              <div class="row q-gutter-xs">
+                <q-btn icon="edit" size="sm" color="blue" flat dense @click.stop="editItem(user)" />
+                <q-btn
+                  icon="delete"
+                  size="sm"
+                  color="red"
+                  flat
+                  dense
+                  @click.stop="deleteItem(user.id)"
+                />
+              </div>
+            </q-item-section>
+          </q-item>
+
+          <div v-if="filteredUsers.length === 0" class="text-center q-py-xl">
+            <q-icon name="people_outline" size="50px" color="grey-4" />
+            <div class="text-h6 text-grey-5 q-mt-md">Tidak ada data user</div>
+            <div class="text-caption text-grey-6">
+              {{
+                searchQuery
+                  ? `Tidak ditemukan user dengan kata kunci "${searchQuery}"`
+                  : 'Belum ada user terdaftar'
+              }}
+            </div>
+          </div>
+        </q-list>
+      </q-card-section>
+    </q-card>
   </q-page>
 </template>
 
@@ -80,62 +118,57 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { api } from 'boot/axios'
+import axios from 'axios'
 
 const router = useRouter()
 const $q = useQuasar()
 
-// state halaman
+const dataType = ref('user')
 const searchQuery = ref('')
 const users = ref([])
+const loading = ref(true)
 
-// Ambil data dari backend Flask
+// Fetch data user (warga)
 const fetchUsers = async () => {
+  loading.value = true
   try {
-    const res = await api.get('/warga/')
+    const res = await axios.get('http://127.0.0.1:5000/api/warga/')
     if (res.data.success) {
-      users.value = res.data.data.map((u) => ({
-        id: u.id,
-        name: u.nama_warga,
-        address: u.alamat,
-        phone: u.no_telp || u.lokasi || '-', // fallback jika tidak ada field
+      users.value = res.data.data.map((user) => ({
+        ...user,
+        nama_warga: user.nama_warga || '-',
+        alamat: user.alamat || '-',
+        no_telp: user.no_telp || '-',
       }))
     }
   } catch (err) {
-    console.log(err)
-    $q.notify({ message: 'Gagal memuat data warga', color: 'negative' })
+    console.error('Gagal mengambil data user:', err)
+    $q.notify({
+      type: 'negative',
+      message: 'Gagal mengambil data user',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
   }
 }
 
-onMounted(() => {
-  fetchUsers()
-})
-
-// Filter pencarian
+// Filter users berdasarkan pencarian
 const filteredUsers = computed(() => {
-  if (!searchQuery.value) return users.value
+  if (!searchQuery.value.trim()) return users.value
 
-  const q = searchQuery.value.toLowerCase()
-  return users.value.filter(
-    (u) =>
-      u.name.toLowerCase().includes(q) ||
-      u.address.toLowerCase().includes(q) ||
-      u.phone?.toLowerCase().includes(q),
-  )
+  const query = searchQuery.value.toLowerCase()
+  return users.value.filter((user) => {
+    return (
+      user.nama_warga?.toLowerCase().includes(query) ||
+      user.alamat?.toLowerCase().includes(query) ||
+      user.no_telp?.toLowerCase().includes(query)
+    )
+  })
 })
 
-// Tombol Tambah
-const goToAddUser = () => {
-  router.push({ name: 'TambahUser' })
-}
-
-// Tombol Edit
-const editItem = (user) => {
-  router.push({ name: 'EditUser', params: { id: user.id } })
-}
-
-// Tombol Hapus
-const deleteItem = (id) => {
+// Hapus user
+const deleteItem = async (id) => {
   $q.dialog({
     title: 'Konfirmasi Hapus',
     message: 'Apakah Anda yakin ingin menghapus user ini?',
@@ -143,37 +176,81 @@ const deleteItem = (id) => {
     persistent: true,
   }).onOk(async () => {
     try {
-      await api.delete(`/warga/${id}`)
+      await axios.delete(`http://127.0.0.1:5000/api/warga/${id}`)
+
+      // Remove from local list
       users.value = users.value.filter((u) => u.id !== id)
-      $q.notify({ message: 'Berhasil dihapus', color: 'positive' })
-    } catch {
-      $q.notify({ message: 'Gagal menghapus data', color: 'negative' })
+
+      $q.notify({
+        type: 'positive',
+        message: 'User berhasil dihapus!',
+        position: 'top',
+      })
+    } catch (err) {
+      console.error(err)
+      $q.notify({
+        type: 'negative',
+        message: 'Gagal menghapus user',
+        position: 'top',
+      })
     }
   })
 }
+
+// Navigasi
+const goToAddUser = () => {
+  router.push({ name: 'TambahUser' })
+}
+
+const editItem = (user) => {
+  router.push({
+    name: 'EditUser',
+    params: { id: user.id },
+  })
+}
+
+// Lifecycle
+onMounted(() => {
+  fetchUsers()
+})
 </script>
 
 <style scoped>
 .q-page {
-  background-color: #f1f8e9 !important;
+  background-color: #f8faf9 !important;
 }
+
 .rounded-toggle {
   border-radius: 12px;
   border: 1px solid #006837;
 }
+
 .rounded-btn {
   border-radius: 12px;
 }
+
 .search-input :deep(.q-field__control) {
   border-radius: 12px;
   background: white;
 }
-.data-list {
-  background: white;
+
+.data-card {
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Shadow halus */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
+
 .data-item {
-  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+}
+
+.data-item:hover {
+  background-color: #f5f9f7;
+  transform: translateX(2px);
+}
+
+.text-primary {
+  color: #006837 !important;
 }
 </style>
