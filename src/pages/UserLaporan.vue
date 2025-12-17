@@ -385,86 +385,31 @@ const onSubmit = () => {
   confirmDialog.value = true
 }
 
-const submitPengajuan = async () => {
+const submitPengajuan = () => {
   confirmDialog.value = false
 
-  // Validasi lagi sebelum kirim
-  if (!jadwal.value || !jenisSampah.value || jumlahKarung.value <= 0) {
-    $q.notify({
-      type: 'negative',
-      message: 'Mohon lengkapi semua data dengan benar',
-      position: 'top',
-      timeout: 2000,
+  // Simulasi loading
+  $q.loading.show({
+    message: 'Mengirim pengajuan...',
+    spinnerColor: 'primary',
+  })
+
+  setTimeout(() => {
+    // 1. Simpan data ke store
+    setPengajuan({
+      jadwal: jadwal.value,
+      jenisSampah: jenisSampah.value,
+      jumlahKarung: jumlahKarung.value,
+      hargaPerKarung: hargaPerKarung.value,
+      totalPembayaran: totalPembayaran.value,
+      metodePembayaran: metodePembayaran.value,
     })
-    return
-  }
 
-  // Loading
-  if ($q.loading) {
-    $q.loading.show({ message: 'Mengirim pengajuan...', spinnerColor: 'primary' })
-  }
+    $q.loading.hide()
 
-  try {
-    const idWarga = 1 // sesuaikan dengan user login
-
-    // Split jadwal.value yang sudah format database
-    const [tanggal, jam] = jadwal.value.split(' ')
-    const jamPengambilan = jam || '08:00:00' // default jam 08:00
-
-    // Pastikan jam lengkap HH:MM:SS
-    const jamFull = jamPengambilan.length === 5 ? `${jamPengambilan}:00` : jamPengambilan
-
-    const payload = {
-      id_warga: idWarga,
-      alamat: '', // biar backend ambil dari tabel warga
-      sudah_dipilah: 1,
-      jumlah_karung: jumlahKarung.value,
-      jenis_pembayaran: metodePembayaran.value,
-      tanggal_pengambilan: tanggal, // YYYY-MM-DD
-      jam_pengambilan: jamFull, // HH:MM:SS
-      jenis_sampah: jenisSampah.value,
-    }
-
-    console.log('Payload dikirim:', payload)
-
-    const res = await axios.post('http://localhost:5000/api/laporan/', payload)
-
-    if (res.data.success) {
-      setPengajuan({
-        jadwal: jadwal.value,
-        jenisSampah: jenisSampah.value,
-        jumlahKarung: jumlahKarung.value,
-        hargaPerKarung: hargaPerKarung.value,
-        totalPembayaran: totalPembayaran.value,
-        metodePembayaran: metodePembayaran.value,
-      })
-
-      $q.notify({
-        type: 'positive',
-        message: 'Pengajuan berhasil dikirim',
-        position: 'top',
-        timeout: 2000,
-      })
-      successDialog.value = true
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: res.data.message || 'Gagal mengirim pengajuan',
-        position: 'top',
-        timeout: 2000,
-      })
-    }
-  } catch (err) {
-    console.error('Error submitPengajuan:', err)
-    $q.notify({
-      type: 'negative',
-      message: 'Terjadi kesalahan server',
-      position: 'top',
-      timeout: 2000,
-    })
-  } finally {
-    if ($q.loading) $q.loading.hide()
-  }
+    // 2. Tampilkan Success Dialog
+    successDialog.value = true
+  }, 1500)
 }
 
 const closeSuccessDialog = () => {
@@ -475,7 +420,7 @@ const closeSuccessDialog = () => {
   // 3. Redirect ke Dashboard
   router.push({ name: 'UserDashboard' })
 }
-const jumlahKarung = ref(1)
+const jumlahKarung = ref(0)
 const hargaPerKarung = ref(5000)
 
 const totalPembayaran = computed(() => {
