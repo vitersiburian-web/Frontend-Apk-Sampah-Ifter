@@ -469,11 +469,9 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 const $q = useQuasar()
-const router = useRouter()
 
 const jadwals = ref([])
 const opsiPetugas = reactive([])
@@ -490,14 +488,6 @@ const form = reactive({
 
 const isEdit = ref(false)
 const editingId = ref(null)
-
-// Computed properties
-const tanggalForDatePicker = computed({
-  get: () => (form.tanggal ? form.tanggal.replace(/-/g, '/') : ''),
-  set: (val) => {
-    form.tanggal = val.replace(/\//g, '-')
-  },
-})
 
 const tanggalDisplay = computed({
   get: () => {
@@ -619,7 +609,7 @@ const fetchJadwals = async () => {
     if (res.data.success) {
       jadwals.value = res.data.data
     }
-  } catch (error) {
+  } catch {
     $q.notify({
       type: 'negative',
       message: 'Gagal mengambil data jadwal',
@@ -638,7 +628,7 @@ const fetchPetugas = async () => {
       opsiPetugas.length = 0
       opsiPetugas.push(...res.data.data)
     }
-  } catch (error) {
+  } catch {
     $q.notify({
       type: 'negative',
       message: 'Gagal mengambil data petugas',

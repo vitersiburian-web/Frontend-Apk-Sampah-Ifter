@@ -100,13 +100,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import axios from 'axios'
 import NotificationDrawer from 'components/NotificationDrawer.vue'
 
 const route = useRoute()
-const router = useRouter()
 const $q = useQuasar()
 const rightDrawerOpen = ref(false)
 
@@ -232,7 +230,6 @@ const handleLogout = async () => {
     title: 'Konfirmasi Keluar',
     message: `Apakah Anda yakin ingin keluar dari akun <strong>${userName.value}</strong>?`,
     html: true,
-    cancel: true,
     persistent: true,
     ok: {
       color: 'red',

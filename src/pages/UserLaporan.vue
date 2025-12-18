@@ -229,7 +229,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
-import { setPengajuan } from 'src/stores/laporanStore'
 
 const $q = useQuasar()
 const router = useRouter()
