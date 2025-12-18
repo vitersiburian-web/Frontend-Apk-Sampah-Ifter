@@ -2,7 +2,7 @@
 const SplashPage = () => import('pages/SplashPage.vue')
 const LoginPage = () => import('pages/LoginPage.vue')
 const ErrorNotFound = () => import('pages/ErrorNotFound.vue')
-const FormLaporanAdmin = () => import('pages/FormLaporanAdmin.vue') 
+const FormLaporanAdmin = () => import('pages/FormLaporanAdmin.vue')
 
 // Import Layouts
 const AdminLayout = () => import('layouts/AdminLayout.vue')
@@ -34,27 +34,31 @@ const TambahUser = () => import('pages/TambahUser.vue')
 const TambahPetugas = () => import('pages/TambahPetugas.vue')
 const TambahJadwal = () => import('pages/TambahJadwal.vue')
 
+// IMPORT PAGES BARU UNTUK GAJI DAN LAPORAN
+const GajiAdmin = () => import('pages/GajiAdmin.vue')
+const LaporanAdmin = () => import('pages/LaporanAdmin.vue')
+
 export default [
   // Landing/Splash Page
   {
     path: '/',
     component: SplashPage,
-    name: 'Splash'
+    name: 'Splash',
   },
 
   // Login Page
   {
     path: '/login',
     component: LoginPage,
-    name: 'Login'
+    name: 'Login',
   },
-  
+
   // Rute Laporan Masalah (Akses tanpa login)
   {
     path: '/lapor-admin',
     component: FormLaporanAdmin,
     name: 'LaporanAdmin',
-    meta: { title: 'Laporan Masalah' }
+    meta: { title: 'Laporan Masalah' },
   },
 
   // Admin Routes (Grup rute untuk Admin)
@@ -64,61 +68,75 @@ export default [
     meta: { requiresAuth: true, role: 'admin' },
     children: [
       {
-        path: '', 
+        path: '',
         component: AdminDashboard,
         name: 'AdminDashboard',
-        meta: { title: 'Dashboard Admin' }
+        meta: { title: 'Dashboard Admin' },
       },
       {
-        path: 'data', 
+        path: 'data',
         redirect: { name: 'DataPetugas' },
-        meta: { title: 'Data Manajemen' }
+        meta: { title: 'Data Manajemen' },
       },
       {
-        path: 'data/petugas', 
+        path: 'data/petugas',
         component: DataPetugas,
         name: 'DataPetugas',
-        meta: { title: 'Data Petugas' }
+        meta: { title: 'Data Petugas' },
       },
       {
-        path: 'data/user', 
+        path: 'data/user',
         component: DataUser,
         name: 'DataUser',
-        meta: { title: 'Data User' }
+        meta: { title: 'Data User' },
       },
       // HALAMAN JADWAL (Navigasi ke-3)
       {
-        path: 'tambah-jadwal', 
+        path: 'tambah-jadwal',
         component: TambahJadwal,
         name: 'TambahJadwal',
-        meta: { title: 'Jadwal Pengambilan' }
+        meta: { title: 'Jadwal Pengambilan' },
+      },
+      // HALAMAN GAJI (Navigasi ke-4 - BARU)
+      {
+        path: 'gaji',
+        component: GajiAdmin,
+        name: 'GajiAdmin',
+        meta: { title: 'Manajemen Gaji' },
+      },
+      // HALAMAN LAPORAN (Navigasi ke-5 - BARU)
+      {
+        path: 'laporan',
+        component: LaporanAdmin,
+        name: 'LaporanAdmin',
+        meta: { title: 'Laporan & Analisis' },
       },
       {
-        path: 'keuangan', 
+        path: 'keuangan',
         component: KeuanganAdmin,
         name: 'KeuanganAdmin',
-        meta: { title: 'Keuangan' }
+        meta: { title: 'Keuangan' },
       },
       {
-        path: 'riwayat', 
+        path: 'riwayat',
         component: RiwayatAdmin,
         name: 'RiwayatAdmin',
-        meta: { title: 'Riwayat' }
+        meta: { title: 'Riwayat' },
       },
       // Form Tambahan
       {
-        path: 'tambah-user', 
+        path: 'tambah-user',
         component: TambahUser,
         name: 'TambahUser',
-        meta: { title: 'Tambah User' }
+        meta: { title: 'Tambah User' },
       },
       {
-        path: 'tambah-petugas', 
+        path: 'tambah-petugas',
         component: TambahPetugas,
         name: 'TambahPetugas',
-        meta: { title: 'Tambah Petugas' }
-      }
-    ]
+        meta: { title: 'Tambah Petugas' },
+      },
+    ],
   },
 
   // Petugas Routes
@@ -130,8 +148,8 @@ export default [
       { path: '', component: PetugasDashboard, name: 'PetugasDashboard' },
       { path: 'form', component: FormPengambilanSampah, name: 'FormPengambilanSampah' },
       { path: 'rekap', component: RekapPetugas, name: 'RekapPetugas' },
-      { path: 'pendapatan', component: PendapatanPetugas, name: 'PendapatanPetugas' }
-    ]
+      { path: 'pendapatan', component: PendapatanPetugas, name: 'PendapatanPetugas' },
+    ],
   },
 
   // User/Warga Routes
@@ -141,18 +159,33 @@ export default [
     meta: { requiresAuth: true, role: 'user' },
     children: [
       { path: '', redirect: { name: 'UserDashboard' } },
-      { path: 'dashboard', component: UserDashboard, name: 'UserDashboard', meta: { title: 'Dashboard' } },
-      { path: 'laporan', component: UserLaporan, name: 'UserLaporan', meta: { title: 'Laporan Pengambilan' } },
+      {
+        path: 'dashboard',
+        component: UserDashboard,
+        name: 'UserDashboard',
+        meta: { title: 'Dashboard' },
+      },
+      {
+        path: 'laporan',
+        component: UserLaporan,
+        name: 'UserLaporan',
+        meta: { title: 'Laporan Pengambilan' },
+      },
       { path: 'maps', component: UserMaps, name: 'UserMaps', meta: { title: 'Peta Lokasi' } },
-      { path: 'notifikasi', component: UserNotifikasi, name: 'UserNotifikasi', meta: { title: 'Notifikasi' } },
-      { path: 'riwayat', component: UserRiwayat, name: 'UserRiwayat', meta: { title: 'Riwayat' } }
-    ]
+      {
+        path: 'notifikasi',
+        component: UserNotifikasi,
+        name: 'UserNotifikasi',
+        meta: { title: 'Notifikasi' },
+      },
+      { path: 'riwayat', component: UserRiwayat, name: 'UserRiwayat', meta: { title: 'Riwayat' } },
+    ],
   },
 
   // 404 - Not Found
   {
     path: '/:catchAll(.*)*',
     component: ErrorNotFound,
-    name: 'ErrorNotFound'
-  }
+    name: 'ErrorNotFound',
+  },
 ]

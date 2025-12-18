@@ -108,7 +108,7 @@
                 <div>
                   <div class="text-caption text-grey-7">Waktu</div>
                   <div class="text-body2 text-weight-medium text-dark">
-                    {{ getPickupTime(jadwalList[0].tanggal) }}
+                    {{ getPickupTime(jadwalList[0]) }}
                   </div>
                 </div>
               </div>
@@ -159,8 +159,8 @@
         <q-card flat class="stat-card">
           <q-card-section class="text-center">
             <q-icon name="history" color="primary" size="md" class="q-mb-xs" />
-            <div class="text-h6 text-weight-bold text-dark">{{ totalRiwayat }}</div>
-            <div class="text-caption text-grey-7">Total Pengambilan</div>
+            <div class="text-h6 text-weight-bold text-dark">{{ finishedCount }}</div>
+            <div class="text-caption text-grey-7">Selesai</div>
           </q-card-section>
         </q-card>
       </div>
@@ -235,7 +235,7 @@ const loadingAction = ref(false)
 const totalRiwayat = ref(0)
 const pendingCount = ref(0)
 const lastLogin = ref(new Date())
-
+const finishedCount = ref(0)
 // Data dari store
 const jadwalDiajukan = jadwalPengajuan
 const jenisSampahDiajukan = jenisSampahPengajuan
@@ -244,13 +244,10 @@ const hasPengajuan = statusPengajuan
 // Computed
 const canAjukan = computed(() => {
   if (!jadwalToday.value) return false
-  if (hasPengajuan.value) return false // Sudah ada pengajuan
+  if (hasPengajuan.value) return false
 
-  // Cek apakah hari ini ada jadwal
   const today = date.formatDate(new Date(), 'YYYY-MM-DD')
-  const jadwalDate = date.formatDate(jadwalToday.value.tanggal, 'YYYY-MM-DD')
-
-  return jadwalDate === today
+  return jadwalToday.value.tanggal === today
 })
 
 // Methods
@@ -284,17 +281,21 @@ const formatDay = (dateString) => {
   }
 }
 
-const getPickupTime = (dateString) => {
-  try {
-    const dateObj = new Date(dateString)
-    const hour = dateObj.getHours()
+const getPickupTime = (jadwal) => {
+  if (!jadwal) return '-'
 
-    if (hour < 12) return 'Pagi (08:00-12:00)'
-    if (hour < 15) return 'Siang (12:00-15:00)'
-    return 'Sore (15:00-18:00)'
-  } catch {
-    return '08:00-12:00'
-  }
+  // fallback kalau null
+  const start = jadwal.jam_mulai ? jadwal.jam_mulai.substring(0, 5) : '08:00'
+  const end = jadwal.jam_selesai ? jadwal.jam_selesai.substring(0, 5) : '12:00'
+
+  // Tentukan pagi/siang/sore
+  const hour = parseInt(start.split(':')[0])
+  let label = ''
+  if (hour < 12) label = 'Pagi'
+  else if (hour < 15) label = 'Siang'
+  else label = 'Sore'
+
+  return `${label} (${start}-${end})`
 }
 
 const getStatusColor = (status) => {
@@ -356,8 +357,12 @@ const fetchUserName = async () => {
 
 const fetchJadwalWeek = async () => {
   try {
-    const res = await axios.get('http://localhost:5000/api/jadwal/week')
+    const res = await axios.get('http://localhost:5000/api/jadwal/list')
     jadwalList.value = res.data.data || []
+
+    // Ambil jadwal hari ini
+    const todayStr = date.formatDate(new Date(), 'YYYY-MM-DD')
+    jadwalToday.value = jadwalList.value.find((j) => j.tanggal === todayStr) || null
   } catch (err) {
     console.error('Gagal ambil jadwal week:', err)
   }
@@ -379,25 +384,27 @@ const fetchJadwalToday = async () => {
 
 const fetchStats = async () => {
   try {
-    const user_id = localStorage.getItem('user_id')
-    if (!user_id) return
+    const userId = localStorage.getItem('user_id')
+    if (!userId) return
 
-    // Fetch riwayat untuk menghitung stats
-    const res = await axios.get('http://localhost:5000/api/riwayat', {
-      params: { id_warga: user_id },
+    // Get warga by user id
+    const wargaRes = await axios.get(`http://localhost:5000/api/warga/by-user/${userId}`)
+
+    if (!wargaRes.data.success) return
+
+    const id_warga = wargaRes.data.data.id // ⬅ ambil id warga
+
+    const laporanRes = await axios.get(`http://localhost:5000/api/laporan`, {
+      params: { id_warga },
     })
 
-    if (res.data.success) {
-      const riwayatData = res.data.data || []
-      totalRiwayat.value = riwayatData.length
-      pendingCount.value = riwayatData.filter(
-        (r) =>
-          r.status?.toLowerCase().includes('menunggu') ||
-          r.status?.toLowerCase().includes('pending'),
-      ).length
-    }
+    const data = laporanRes.data.data || []
+
+    totalRiwayat.value = data.length
+    pendingCount.value = data.filter((l) => l.status?.toLowerCase() === 'menunggu').length
+    finishedCount.value = data.filter((l) => l.status?.toLowerCase() === 'selesai').length
   } catch (err) {
-    console.error('Gagal memuat stats:', err)
+    console.error(err)
   }
 }
 

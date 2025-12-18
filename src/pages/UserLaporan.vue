@@ -2,23 +2,19 @@
   <q-page padding>
     <h4 class="text-h4 text-dark-green q-my-md q-ml-sm">Ajukan Pengambilan</h4>
     <p class="text-body1 text-dark-green q-my-sm q-ml-sm">
-      Mengajukan pengambilan sampah kepada petugas, pastikan sampah sudha dipilah
+      Mengajukan pengambilan sampah kepada petugas, pastikan sampah sudah dipilah
     </p>
 
     <q-form @submit.prevent="onSubmit" class="q-gutter-md q-mt-lg">
+      <!-- Jadwal -->
       <div>
         <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">
           Jadwal Pengambilan Sampah
         </label>
-        <q-input
-          outlined
-          readonly
-          :value="jadwalDisplay"
-          :placeholder="jadwalDisplay"
-          class="q-mt-xs form-input"
-        />
+        <q-input outlined readonly :value="jadwalDisplay" class="q-mt-xs form-input" />
       </div>
 
+      <!-- Jenis Sampah -->
       <div>
         <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">Jenis Sampah</label>
         <q-select
@@ -34,8 +30,7 @@
 
       <!-- Jumlah Karung -->
       <div>
-        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium"> Jumlah Karung </label>
-
+        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">Jumlah Karung</label>
         <q-input
           v-model.number="jumlahKarung"
           type="number"
@@ -82,14 +77,11 @@
     <!-- Dialog Konfirmasi -->
     <q-dialog v-model="confirmDialog" persistent>
       <q-card class="confirm-card">
-        <!-- Header Icon + Judul -->
         <q-card-section class="text-center q-pt-lg">
           <q-icon name="help_outline" size="64px" class="icon-green" />
-
           <div class="text-h6 text-weight-bold text-dark-green q-mt-md">
             Ajukan Pengambilan Sampah?
           </div>
-
           <div class="text-body2 text-grey-7 q-mt-sm q-px-md">
             Pastikan data yang Anda masukkan sudah benar
           </div>
@@ -99,25 +91,16 @@
         <q-card-section>
           <q-card flat bordered class="preview-box q-mt-md">
             <q-card-section class="q-pa-md">
-              <!-- Jadwal -->
               <div class="q-mb-sm">
                 <div class="text-caption text-grey-7">Jadwal</div>
-                <div class="text-body2 text-weight-bold text-dark-green">
-                  {{ jadwalDisplay }}
-                </div>
+                <div class="text-body2 text-weight-bold text-dark-green">{{ jadwalDisplay }}</div>
               </div>
               <q-separator class="q-my-sm" />
-
-              <!-- Jenis Sampah -->
               <div class="q-mb-sm">
                 <div class="text-caption text-grey-7">Jenis Sampah</div>
-                <div class="text-body2 text-weight-bold text-dark-green">
-                  {{ jenisSampah }}
-                </div>
+                <div class="text-body2 text-weight-bold text-dark-green">{{ jenisSampah }}</div>
               </div>
               <q-separator class="q-my-sm" />
-
-              <!-- Jumlah Karung -->
               <div class="q-mb-sm">
                 <div class="text-caption text-grey-7">Jumlah Karung</div>
                 <div class="text-body2 text-weight-bold text-dark-green">
@@ -125,8 +108,6 @@
                 </div>
               </div>
               <q-separator class="q-my-sm" />
-
-              <!-- Total Pembayaran -->
               <div>
                 <div class="text-caption text-grey-7">Total Pembayaran</div>
                 <div class="text-body2 text-weight-bold text-dark-green">
@@ -140,7 +121,6 @@
         <!-- Metode Pembayaran -->
         <q-card-section>
           <div class="text-caption text-grey-7 q-mb-sm">Metode Pembayaran</div>
-
           <q-option-group
             v-model="metodePembayaran"
             :options="[
@@ -149,8 +129,6 @@
             ]"
             color="primary"
           />
-
-          <!-- Jika pilih QRIS -->
           <div v-if="metodePembayaran === 'qris'" class="text-center q-mt-md">
             <img src="../assets/qris-example.jpg" alt="QRIS" style="width: 180px" />
             <div class="text-grey-7 q-mt-sm">
@@ -161,7 +139,6 @@
           </div>
         </q-card-section>
 
-        <!-- Buttons -->
         <q-card-actions class="q-px-md q-pb-lg q-pt-none q-gutter-sm">
           <q-btn
             label="Batal"
@@ -172,7 +149,6 @@
             no-caps
             v-close-popup
           />
-
           <q-btn
             v-if="metodePembayaran === 'cash'"
             label="Ya, Ajukan"
@@ -181,7 +157,6 @@
             no-caps
             @click="submitPengajuan"
           />
-
           <q-btn
             v-if="metodePembayaran === 'qris'"
             label="Sudah Bayar"
@@ -221,23 +196,19 @@
               <div class="text-body2 text-dark-green q-mb-xs">
                 <strong>Jumlah Karung:</strong> {{ jumlahKarung }}
               </div>
-
               <div class="text-body2 text-dark-green q-mb-xs">
                 <strong>Total Pembayaran:</strong> {{ formatRupiah(totalPembayaran) }}
               </div>
-
               <q-separator class="q-my-sm" />
               <div class="text-body2 text-weight-bold text-orange q-mt-sm">
                 Status: Menunggu Konfirmasi
               </div>
             </q-card-section>
           </q-card>
-
           <div class="text-caption text-grey-6 q-mt-md q-px-lg">
             Petugas akan segera mengkonfirmasi jadwal pengambilan sampah Anda
           </div>
         </q-card-section>
-
         <q-card-actions class="q-px-lg q-pb-lg">
           <q-btn
             label="Kembali ke Dashboard"
@@ -256,19 +227,24 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
-// Import store kita
-import { setPengajuan } from 'src/stores/laporanStore'
+import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import { setPengajuan } from 'src/stores/laporanStore'
 
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
+
 const jadwal = ref('')
+const jadwalDisplay = ref('Memuat jadwal...')
 const jenisSampah = ref('')
 const metodePembayaran = ref('cash')
-const jadwalDisplay = ref('Memuat jadwal...')
+const jumlahKarung = ref(0)
+const hargaPerKarung = ref(5000)
+const confirmDialog = ref(false)
+const successDialog = ref(false)
+const userId = localStorage.getItem('user_id') || null
 
-// Options untuk jenis sampah
 const jenisSampahOptions = [
   'Organik',
   'Anorganik',
@@ -280,18 +256,19 @@ const jenisSampahOptions = [
   'Elektronik',
 ]
 
-// Dialog states
-const confirmDialog = ref(false)
-const successDialog = ref(false)
+const totalPembayaran = computed(() => jumlahKarung.value * hargaPerKarung.value)
 
-// Format jadwal untuk ditampilkan
+const pad = (n) => n.toString().padStart(2, '0')
+
+const formatRupiah = (value) => 'Rp ' + value.toLocaleString('id-ID')
+
+// Format untuk tampilan
 const formatJadwal = (dateString) => {
   if (!dateString) return '-'
-
   try {
     const [datePart, timePart] = dateString.split(' ')
     const [year, month, day] = datePart.split('-')
-
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
     const monthNames = [
       'Januari',
       'Februari',
@@ -306,37 +283,38 @@ const formatJadwal = (dateString) => {
       'November',
       'Desember',
     ]
-
-    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
     const date = new Date(year, month - 1, day)
     const dayName = dayNames[date.getDay()]
-
     return `${dayName}, ${day} ${monthNames[month - 1]} ${year}${timePart ? ' • ' + timePart + ' WIB' : ''}`
   } catch {
     return dateString
   }
 }
 
-import { useRoute } from 'vue-router'
-
-const route = useRoute()
-
 onMounted(async () => {
   const idJadwal = route.query.id_jadwal
   if (!idJadwal) {
     jadwalDisplay.value = 'Jadwal tidak tersedia'
-    return
+    return $q.notify({
+      type: 'warning',
+      message: 'ID jadwal tidak ditemukan',
+      position: 'top',
+      timeout: 2000,
+    })
   }
 
   try {
     const res = await axios.get(`http://localhost:5000/api/jadwal/${idJadwal}`)
     if (res.data.success && res.data.data) {
       const j = res.data.data
+      const rawTanggal = j.tanggal
+      const dateObj = new Date(rawTanggal)
+      if (isNaN(dateObj.getTime())) throw new Error('Tanggal dari API tidak valid')
+      const formattedTanggal = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`
+      let jamMulai = j.jam_mulai || '08:00:00'
+      if (jamMulai.length === 5) jamMulai += ':00'
 
-      // Set jadwal.value supaya nanti bisa dikirim
-      jadwal.value = `${j.tanggal} ${j.jam_mulai}`
-
-      const dateObj = new Date(j.tanggal)
+      // Display rapi
       const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
       const monthNames = [
         'Januari',
@@ -352,15 +330,15 @@ onMounted(async () => {
         'November',
         'Desember',
       ]
-
       const dayName = dayNames[dateObj.getDay()]
       const day = dateObj.getDate()
-      const month = dateObj.getMonth()
+      const month = monthNames[dateObj.getMonth()]
       const year = dateObj.getFullYear()
-      const jamMulai = j.jam_mulai.slice(0, 5)
-      const jamSelesai = j.jam_selesai.slice(0, 5)
+      jadwalDisplay.value = `${dayName}, ${day} ${month} ${year} • ${j.jam_mulai.slice(0, 5)} - ${j.jam_selesai.slice(0, 5)} WIB`
 
-      jadwalDisplay.value = `${dayName}, ${day} ${monthNames[month]} ${year} • ${jamMulai} - ${jamSelesai} WIB`
+      // Simpan untuk validasi & backend
+      window.currentJadwalData = { tanggal: formattedTanggal, jam_mulai: jamMulai }
+      jadwal.value = formattedTanggal + ' ' + jamMulai
     } else {
       jadwalDisplay.value = 'Jadwal tidak ditemukan'
     }
@@ -371,64 +349,57 @@ onMounted(async () => {
 })
 
 const onSubmit = () => {
-  // Validasi form
   if (!jadwal.value || !jenisSampah.value) {
-    $q.notify({
+    return $q.notify({
       type: 'negative',
       message: 'Mohon lengkapi semua data',
       position: 'top',
       timeout: 2000,
     })
-    return
   }
-
   confirmDialog.value = true
 }
 
-const submitPengajuan = () => {
-  confirmDialog.value = false
+async function submitPengajuan() {
+  if (!userId) {
+    return $q.notify({ type: 'negative', message: 'User belum login' })
+  }
+  if (jumlahKarung.value < 1) {
+    return $q.notify({ type: 'negative', message: 'Jumlah karung minimal 1' })
+  }
 
-  // Simulasi loading
-  $q.loading.show({
-    message: 'Mengirim pengajuan...',
-    spinnerColor: 'primary',
-  })
+  try {
+    const [tanggal, jam] = jadwal.value.split(' ')
+    const payload = {
+      user_id: userId,
+      alamat: '',
+      sudah_dipilah: 1,
+      jumlah_karung: jumlahKarung.value,
+      jenis_pembayaran: metodePembayaran.value,
+      tanggal_pengambilan: tanggal,
+      jam_pengambilan: jam,
+      jenis_sampah: jenisSampah.value,
+    }
 
-  setTimeout(() => {
-    // 1. Simpan data ke store
-    setPengajuan({
-      jadwal: jadwal.value,
-      jenisSampah: jenisSampah.value,
-      jumlahKarung: jumlahKarung.value,
-      hargaPerKarung: hargaPerKarung.value,
-      totalPembayaran: totalPembayaran.value,
-      metodePembayaran: metodePembayaran.value,
-    })
-
-    $q.loading.hide()
-
-    // 2. Tampilkan Success Dialog
-    successDialog.value = true
-  }, 1500)
+    const res = await axios.post('http://localhost:5000/api/laporan', payload)
+    if (res.data.success) {
+      console.log('Laporan berhasil dibuat, ID:', res.data.laporan_id)
+      confirmDialog.value = false
+      successDialog.value = true
+    } else {
+      $q.notify({ type: 'negative', message: res.data.message })
+    }
+  } catch (err) {
+    console.error(err)
+    $q.notify({ type: 'negative', message: 'Gagal mengajukan laporan' })
+  }
 }
 
 const closeSuccessDialog = () => {
   successDialog.value = false
-  // Reset form
   jadwal.value = ''
   jenisSampah.value = ''
-  // 3. Redirect ke Dashboard
   router.push({ name: 'UserDashboard' })
-}
-const jumlahKarung = ref(0)
-const hargaPerKarung = ref(5000)
-
-const totalPembayaran = computed(() => {
-  return jumlahKarung.value * hargaPerKarung.value
-})
-
-const formatRupiah = (value) => {
-  return 'Rp ' + value.toLocaleString('id-ID')
 }
 </script>
 
