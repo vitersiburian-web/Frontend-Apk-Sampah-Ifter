@@ -148,13 +148,23 @@ const loadPetugasId = async () => {
   }
 
   const payload = parseJwt(token)
-  if (!payload || !payload.user_id) {
+  console.log('decoded token: ', payload) // debug
+
+  const userId =
+    payload?.user_id ||
+    payload?.id ||
+    payload?.userId ||
+    payload?.sub ||
+    payload?.uid ||
+    payload?.id_user
+
+  if (!userId) {
     $q.notify({ color: 'negative', message: 'Token tidak valid. Silakan login ulang.' })
     router.push({ name: 'LoginPage' })
     throw new Error('TOKEN_INVALID')
   }
 
-  const res = await api.get(`/api/petugas/by-user/${payload.user_id}`, {
+  const res = await api.get(`/api/petugas/by-user/${userId}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
 

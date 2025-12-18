@@ -120,7 +120,14 @@ const loadPetugasId = async () => {
   }
 
   const payload = parseJwt(token)
-  const userId = payload?.user_id || payload?.id || payload?.userId || payload?.sub
+  const userId =
+    payload?.user_id ||
+    payload?.id ||
+    payload?.userId ||
+    payload?.sub ||
+    payload?.uid || // tambahan
+    payload?.id_user // tambahan
+
   if (!userId) {
     $q.notify({ color: 'negative', message: 'Token tidak valid. Silakan login ulang.' })
     router.push({ name: 'LoginPage' })
