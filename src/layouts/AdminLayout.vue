@@ -86,7 +86,7 @@
       >
         <q-route-tab to="/admin" icon="home" label="Home" exact />
         <q-route-tab to="/admin/data" icon="manage_accounts" label="Data" />
-        <q-route-tab to="/admin/tambah-jadwal" icon="event_note" label="Jadwal" exact />
+        <q-route-tab to="/admin/jadwal" icon="event_note" label="Jadwal" exact />
         <q-route-tab to="/admin/gaji" icon="payments" label="Gaji" exact />
         <q-route-tab to="/admin/laporan" icon="summarize" label="Laporan" exact />
         <q-route-tab to="/admin/keuangan" icon="account_balance_wallet" label="Cuan" exact />
@@ -162,7 +162,7 @@ const currentRouteTitle = computed(() => {
   if (title) return title
 
   if (route.path.startsWith('/admin/data')) return 'Data Manajemen'
-  if (route.path === '/admin/tambah-jadwal') return 'Jadwal Pengambilan'
+  if (route.path === '/admin/jadwal') return 'Jadwal Pengambilan'
   if (route.path === '/admin/gaji') return 'Manajemen Gaji'
   if (route.path === '/admin/laporan') return 'Laporan & Analisis'
   if (route.path === '/admin/keuangan') return 'Keuangan'

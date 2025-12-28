@@ -14,6 +14,7 @@
           placeholder="Username"
           class="mb input-glow"
           bg-color="white"
+          :disable="loading"
         >
           <template v-slot:prepend>
             <q-icon name="people" color="primary" />
@@ -27,6 +28,8 @@
           placeholder="Kata Sandi"
           class="mb input-glow"
           bg-color="white"
+          :disable="loading"
+          @keyup.enter="handleLogin"
         >
           <template v-slot:prepend>
             <q-icon name="lock" color="primary" />
@@ -45,11 +48,19 @@
           <span class="link" @click="lupaSandi">Lupa Sandi?</span>
         </div>
 
-        <q-btn label="Masuk" class="btn-login" unelevated no-caps @click="handleLogin" />
+        <q-btn
+          label="Masuk"
+          class="btn-login"
+          unelevated
+          no-caps
+          @click="handleLogin"
+          :loading="loading"
+          :disable="loading"
+        />
 
         <div class="q-mt-lg text-center">
           <div class="text-grey-7 q-mb-sm text-caption">Ada kendala saat masuk?</div>
-          <q-btn flat dense no-caps class="btn-hubungi" @click="goToLaporan">
+          <q-btn flat dense no-caps class="btn-hubungi" @click="goToLaporan" :disable="loading">
             <q-icon name="support_agent" class="q-mr-xs" size="xs" />
             Hubungi Admin / Laporkan Masalah
           </q-btn>
@@ -60,10 +71,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useQuasar } from 'quasar'
+import { jwtDecode } from 'jwt-decode'
 
 const router = useRouter()
 const $q = useQuasar()
@@ -71,56 +83,153 @@ const $q = useQuasar()
 const username = ref('')
 const password = ref('')
 const showPwd = ref(false)
+const loading = ref(false)
 
+// Clear auth data
+const clearAuthData = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('userData')
+  localStorage.removeItem('username')
+  localStorage.removeItem('role')
+  localStorage.removeItem('user_id')
+}
+
+// Redirect berdasarkan role
+const redirectByRole = (role) => {
+  switch (role) {
+    case 'admin':
+      router.push('/admin')
+      break
+    case 'petugas':
+      router.push('/petugas')
+      break
+    case 'warga':
+      router.push('/user')
+      break
+    default:
+      router.push('/')
+  }
+}
+
+// Cek jika sudah login saat halaman dimuat
+onMounted(() => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    try {
+      const payload = jwtDecode(token)
+      // Cek apakah token masih valid (belum expired)
+      if (payload.exp && payload.exp * 1000 > Date.now()) {
+        redirectByRole(payload.role)
+      } else {
+        // Token expired, hapus data auth
+        clearAuthData()
+      }
+    } catch {
+      // Token invalid, hapus data auth
+      clearAuthData()
+    }
+  }
+})
+
+// Handle login
 const handleLogin = async () => {
-  if (!username.value || !password.value) {
+  // Validasi input
+  if (!username.value.trim() || !password.value.trim()) {
     $q.notify({
-      message: 'Email dan Kata Sandi wajib diisi!',
+      message: 'Username dan Kata Sandi wajib diisi!',
       color: 'negative',
       icon: 'warning',
       position: 'top',
+      timeout: 3000,
     })
     return
   }
 
+  loading.value = true
+
   try {
+    // Kirim request login
     const response = await axios.post('http://localhost:5000/api/auth/login', {
       username: username.value,
       password: password.value,
     })
 
-    const token = response.data.token
+    const { token, user } = response.data
+
+    // Simpan token ke localStorage
     localStorage.setItem('token', token)
 
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    localStorage.setItem('username', payload.username)
-    localStorage.setItem('role', payload.role)
-    localStorage.setItem('user_id', payload.id)
+    // Simpan data user lengkap
+    localStorage.setItem('userData', JSON.stringify(user))
+    localStorage.setItem('username', user.username)
+    localStorage.setItem('role', user.role)
+    localStorage.setItem('user_id', user.id)
 
-    if (payload.role === 'admin') {
-      router.push('/admin')
-    } else if (payload.role === 'petugas') {
-      router.push('/petugas')
-    } else {
-      router.push('/user')
-    }
-  } catch (error) {
-    console.error(error)
+    // Notifikasi sukses
     $q.notify({
-      message: 'Username atau kata sandi salah!',
-      color: 'negative',
+      message: `Selamat datang, ${user.nama || user.username}!`,
+      color: 'positive',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 2000,
     })
+
+    // Redirect berdasarkan role
+    redirectByRole(user.role)
+  } catch (error) {
+    console.error('Login error:', error)
+
+    let errorMessage = 'Terjadi kesalahan pada server'
+
+    // Handle error response dari server
+    if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          errorMessage = 'Username atau password salah'
+          break
+        case 404:
+          errorMessage = 'Username tidak ditemukan'
+          break
+        case 400:
+          errorMessage = 'Data tidak lengkap'
+          break
+        case 403:
+          errorMessage = 'Akun tidak aktif'
+          break
+        case 500:
+          errorMessage = 'Server sedang mengalami masalah'
+          break
+      }
+    } else if (error.request) {
+      // Request dibuat tapi tidak ada response
+      errorMessage = 'Tidak dapat terhubung ke server'
+    }
+
+    // Tampilkan notifikasi error
+    $q.notify({
+      message: errorMessage,
+      color: 'negative',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  } finally {
+    loading.value = false
   }
 }
 
+// Handle lupa sandi
 const lupaSandi = () => {
   $q.notify({
     message: 'Silahkan gunakan tombol "Hubungi Admin" di bawah untuk bantuan reset sandi.',
     color: 'info',
     icon: 'info',
+    position: 'top',
+    timeout: 4000,
   })
 }
 
+// Navigasi ke laporan admin
 const goToLaporan = () => {
   router.push({ name: 'LaporanAdmin' })
 }
@@ -163,6 +272,7 @@ const goToLaporan = () => {
   margin: 0 0 48px 0;
   line-height: 1.1;
   text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+  text-align: center;
 }
 
 .login-card {
@@ -178,6 +288,7 @@ const goToLaporan = () => {
   font-weight: 700;
   color: #006837;
   margin: 0 0 24px 0;
+  text-align: center;
 }
 
 .mb {
@@ -220,28 +331,64 @@ const goToLaporan = () => {
   transition: transform 0.2s;
 }
 
-.btn-login:active {
+.btn-login:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 104, 55, 0.4);
+}
+
+.btn-login:active:not(:disabled) {
   transform: scale(0.98);
 }
 
+.btn-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .btn-hubungi {
-  color: #ffc107; /* Warna Kuning agar kontras */
+  color: #ffc107;
   font-weight: 600;
   border: 1px dashed #ffc107;
   border-radius: 8px;
   width: 100%;
   transition: all 0.3s;
+  padding: 8px;
 }
 
-.btn-hubungi:hover {
-  background-color: #fff8e1;
+.btn-hubungi:hover:not(:disabled) {
+  background-color: rgba(255, 248, 225, 0.3);
   color: #ffa000;
   border-style: solid;
+}
+
+.btn-hubungi:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 600px) {
   .title {
     font-size: 40px;
+    margin-bottom: 32px;
+  }
+
+  .login-card {
+    padding: 24px 16px;
+  }
+
+  .login-card h3 {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 400px) {
+  .title {
+    font-size: 32px;
+  }
+
+  .content {
+    padding: 10px;
   }
 }
 </style>

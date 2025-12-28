@@ -27,13 +27,12 @@ const UserRiwayat = () => import('pages/UserRiwayat.vue')
 
 // Import Pages Admin
 const DataPetugas = () => import('pages/DataPetugas.vue')
-const DataUser = () => import('pages/DataUser.vue')
+const DataWarga = () => import('pages/DataWarga.vue')
 const KeuanganAdmin = () => import('pages/KeuanganAdmin.vue')
 const RiwayatAdmin = () => import('pages/RiwayatAdmin.vue')
-const TambahUser = () => import('pages/TambahUser.vue')
 const TambahPetugas = () => import('pages/TambahPetugas.vue')
 const TambahJadwal = () => import('pages/TambahJadwal.vue')
-
+const ListJadwal = () => import('pages/JadwalList.vue')
 // IMPORT PAGES BARU UNTUK GAJI DAN LAPORAN
 const GajiAdmin = () => import('pages/GajiAdmin.vue')
 const LaporanAdmin = () => import('pages/LaporanAdmin.vue')
@@ -84,18 +83,30 @@ export default [
         name: 'DataPetugas',
         meta: { title: 'Data Petugas' },
       },
+      // HALAMAN JADWAL
       {
-        path: 'data/user',
-        component: DataUser,
-        name: 'DataUser',
-        meta: { title: 'Data User' },
-      },
-      // HALAMAN JADWAL (Navigasi ke-3)
-      {
-        path: 'tambah-jadwal',
-        component: TambahJadwal,
-        name: 'TambahJadwal',
+        path: 'jadwal',
+        redirect: { name: 'ListJadwal' },
         meta: { title: 'Jadwal Pengambilan' },
+      },
+      {
+        path: 'jadwal/list',
+        component: ListJadwal,
+        name: 'ListJadwal',
+        meta: { title: 'Jadwal Pengambilan' },
+      },
+      {
+        path: 'jadwal/tambah',
+        component: TambahJadwal, // <-- KOMPONEN YANG SAMA
+        name: 'TambahJadwal',
+        meta: { title: 'Tambah Jadwal' },
+      },
+      {
+        path: 'jadwal/edit/:id',
+        component: TambahJadwal, // <-- PAKAI KOMPONEN YANG SAMA!
+        name: 'EditJadwal',
+        meta: { title: 'Edit Jadwal' },
+        props: true, // <-- Ini akan menerima route.params.id
       },
       // HALAMAN GAJI (Navigasi ke-4 - BARU)
       {
@@ -125,16 +136,33 @@ export default [
       },
       // Form Tambahan
       {
-        path: 'tambah-user',
-        component: TambahUser,
-        name: 'TambahUser',
-        meta: { title: 'Tambah User' },
+        path: 'data/warga',
+        component: DataWarga,
+        name: 'DataWarga',
+        meta: { title: 'Data Warga' },
+      },
+      {
+        path: 'tambah-warga',
+        name: 'TambahWarga',
+        component: () => import('pages/TambahWarga.vue'),
+      },
+      {
+        path: 'edit-warga/:id',
+        name: 'EditWarga',
+        component: () => import('pages/TambahWarga.vue'),
+        props: true,
       },
       {
         path: 'tambah-petugas',
         component: TambahPetugas,
         name: 'TambahPetugas',
         meta: { title: 'Tambah Petugas' },
+      },
+      {
+        path: 'edit-petugas/:id', // <-- TAMBAHKAN INI
+        component: () => import('pages/TambahPetugas.vue'),
+        name: 'EditPetugas',
+        props: true,
       },
     ],
   },

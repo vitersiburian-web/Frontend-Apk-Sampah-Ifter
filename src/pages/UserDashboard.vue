@@ -247,7 +247,9 @@ const canAjukan = computed(() => {
   if (hasPengajuan.value) return false
 
   const today = date.formatDate(new Date(), 'YYYY-MM-DD')
-  return jadwalToday.value.tanggal === today
+  const jadwalTanggal = date.formatDate(jadwalToday.value.tanggal, 'YYYY-MM-DD')
+
+  return jadwalTanggal === today
 })
 
 // Methods
@@ -357,10 +359,11 @@ const fetchUserName = async () => {
 
 const fetchJadwalWeek = async () => {
   try {
-    const res = await axios.get('http://localhost:5000/api/jadwal/list')
-    jadwalList.value = res.data.data || []
+    const res = await axios.get('http://localhost:5000/api/jadwal/next')
 
-    // Ambil jadwal hari ini
+    // ⬇️ karena backend balikin OBJECT
+    jadwalList.value = res.data.data ? [res.data.data] : []
+
     const todayStr = date.formatDate(new Date(), 'YYYY-MM-DD')
     jadwalToday.value = jadwalList.value.find((j) => j.tanggal === todayStr) || null
   } catch (err) {

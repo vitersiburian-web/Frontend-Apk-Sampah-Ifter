@@ -1,6 +1,7 @@
 <template>
   <q-page class="q-pa-md bg-green-1">
     <div class="row q-mb-md">
+      <!-- Di DataPetugas.vue, update q-btn-toggle -->
       <q-btn-toggle
         v-model="dataType"
         toggle-color="green"
@@ -8,7 +9,7 @@
         text-color="primary"
         :options="[
           { label: 'Data Petugas', value: 'petugas' },
-          { label: 'Data User', value: 'user', to: { name: 'DataUser' } },
+          { label: 'Data Warga', value: 'warga', to: { name: 'DataWarga' } },
         ]"
         unelevated
         spread
@@ -25,6 +26,8 @@
         @click="goToAddPetugas"
         class="q-px-md text-weight-bold rounded-btn"
       />
+      <q-btn icon="refresh" color="grey" flat round @click="refreshData" />
+
       <q-input
         v-model="searchQuery"
         placeholder="Cari Petugas..."
@@ -39,12 +42,49 @@
       </q-input>
     </div>
 
+    <!-- Statistics Cards -->
+    <div class="row q-col-gutter-md q-mb-md" v-if="!loading && petugasList.length > 0">
+      <div class="col-6 col-sm-3">
+        <q-card class="stat-card text-center">
+          <q-card-section>
+            <div class="text-h6 text-primary">{{ petugasList.length }}</div>
+            <div class="text-caption text-grey-7">Total Petugas</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-6 col-sm-3">
+        <q-card class="stat-card text-center">
+          <q-card-section>
+            <div class="text-h6 text-green">{{ activeCount }}</div>
+            <div class="text-caption text-grey-7">Aktif</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-6 col-sm-3">
+        <q-card class="stat-card text-center">
+          <q-card-section>
+            <div class="text-h6 text-red">{{ inactiveCount }}</div>
+            <div class="text-caption text-grey-7">Tidak Aktif</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-6 col-sm-3">
+        <q-card class="stat-card text-center">
+          <q-card-section>
+            <div class="text-h6 text-yellow-8">{{ totalKarung }}</div>
+            <div class="text-caption text-grey-7">Total Karung</div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
     <!-- Loading State -->
     <div v-if="loading" class="text-center q-py-lg">
       <q-spinner color="primary" size="2em" />
       <div class="text-grey-7 q-mt-sm">Memuat data...</div>
     </div>
 
+    <!-- Data List -->
     <!-- Data List -->
     <q-card class="data-card" v-else>
       <q-card-section class="q-pb-none">
@@ -56,38 +96,50 @@
       <q-separator />
 
       <q-card-section>
-        <q-list separator class="q-mt-sm">
-          <q-item
+        <!-- GANTI Q-LIST dengan DIV biasa -->
+        <div class="q-mt-sm">
+          <div
             v-for="petugas in filteredPetugas"
             :key="petugas.id"
-            class="q-py-md data-item"
-            clickable
-            v-ripple
+            class="q-py-md data-item row items-center"
+            style="border-bottom: 1px solid #eee"
           >
-            <q-item-section avatar>
+            <div class="col-auto q-pr-md">
               <q-avatar color="primary-1" text-color="primary-8" size="md">
                 <q-icon name="support_agent" />
               </q-avatar>
-            </q-item-section>
+            </div>
 
-            <q-item-section>
-              <q-item-label class="text-weight-bold text-dark">
+            <div class="col">
+              <div class="text-weight-bold text-dark">
                 {{ petugas.nama_petugas }}
-              </q-item-label>
-              <q-item-label caption class="text-grey-7">
+                <q-badge
+                  v-if="petugas.total_karung > 0"
+                  color="yellow"
+                  text-color="black"
+                  class="q-ml-xs"
+                >
+                  {{ petugas.total_karung }} karung
+                </q-badge>
+              </div>
+              <div class="text-grey-7 text-caption q-mt-xs">
                 <q-icon name="phone" size="12px" class="q-mr-xs" />
                 {{ petugas.no_telp || '-' }}
-              </q-item-label>
-              <q-item-label caption class="text-grey-7 q-mt-xs">
+              </div>
+              <div class="text-grey-7 text-caption">
+                <q-icon name="email" size="12px" class="q-mr-xs" />
+                {{ petugas.email || '-' }}
+              </div>
+              <div class="q-mt-xs">
                 <q-badge
-                  :color="petugas.status === 'Aktif' ? 'green' : 'red'"
+                  :color="getStatusColor(petugas.status)"
                   :label="petugas.status || 'Tidak Aktif'"
                   class="status-badge"
                 />
-              </q-item-label>
-            </q-item-section>
+              </div>
+            </div>
 
-            <q-item-section side top>
+            <div class="col-auto">
               <div class="row q-gutter-xs">
                 <q-btn
                   label="Shift"
@@ -96,27 +148,20 @@
                   text-color="black"
                   unelevated
                   dense
-                  class="rounded-btn-sm"
+                  @click="assignShift(petugas)"
                 />
-                <q-btn
-                  icon="edit"
-                  size="sm"
-                  color="blue"
-                  flat
-                  dense
-                  @click.stop="editItem(petugas)"
-                />
+                <q-btn icon="edit" size="sm" color="blue" flat dense @click="editItem(petugas)" />
                 <q-btn
                   icon="delete"
                   size="sm"
                   color="red"
                   flat
                   dense
-                  @click.stop="deleteItem(petugas.id)"
+                  @click="deleteItem(petugas.id, petugas.nama_petugas)"
                 />
               </div>
-            </q-item-section>
-          </q-item>
+            </div>
+          </div>
 
           <div v-if="filteredPetugas.length === 0" class="text-center q-py-xl">
             <q-icon name="people" size="50px" color="grey-4" />
@@ -129,7 +174,7 @@
               }}
             </div>
           </div>
-        </q-list>
+        </div>
       </q-card-section>
     </q-card>
   </q-page>
@@ -144,27 +189,68 @@ import axios from 'axios'
 const router = useRouter()
 const $q = useQuasar()
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
+
 const dataType = ref('petugas')
 const searchQuery = ref('')
 const petugasList = ref([])
 const loading = ref(true)
 
+// Helper function untuk warna status
+const getStatusColor = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'aktif':
+      return 'green'
+    case 'cuti':
+      return 'orange'
+    case 'resign':
+      return 'red'
+    default:
+      return 'grey'
+  }
+}
+
 // Fetch data petugas
 const loadPetugas = async () => {
   loading.value = true
   try {
-    const res = await axios.get('http://127.0.0.1:5000/api/petugas/')
+    const token = localStorage.getItem('token')
+
+    const res = await axios.get(`${API_URL}/api/petugas/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
     if (res.data.success) {
       petugasList.value = res.data.data.map((petugas) => ({
-        ...petugas,
+        id: petugas.id,
+        nama_petugas: petugas.nama_petugas || petugas.nama_lengkap,
+        no_telp: petugas.no_telp || petugas.no_telepon,
+        alamat: petugas.alamat,
         status: petugas.status || 'Tidak Aktif',
+        gaji_per_karung: petugas.gaji_per_karung,
+        username: petugas.username,
+        email: petugas.email,
+        total_karung: petugas.total_karung || 0,
       }))
     }
   } catch (err) {
     console.error('Gagal mengambil data petugas:', err)
+
+    if (err.response?.status === 401) {
+      $q.notify({
+        type: 'negative',
+        message: 'Sesi telah berakhir, silakan login kembali',
+        position: 'top',
+      })
+      router.push('/login')
+      return
+    }
+
     $q.notify({
       type: 'negative',
-      message: 'Gagal mengambil data petugas',
+      message: err.response?.data?.message || 'Gagal mengambil data petugas',
       position: 'top',
     })
   } finally {
@@ -181,35 +267,62 @@ const filteredPetugas = computed(() => {
     return (
       petugas.nama_petugas?.toLowerCase().includes(query) ||
       petugas.no_telp?.toLowerCase().includes(query) ||
-      petugas.status?.toLowerCase().includes(query)
+      petugas.status?.toLowerCase().includes(query) ||
+      petugas.email?.toLowerCase().includes(query)
     )
   })
 })
 
+// Computed properties untuk statistik
+const activeCount = computed(() => {
+  return petugasList.value.filter((p) => p.status?.toLowerCase() === 'aktif').length
+})
+
+const inactiveCount = computed(() => {
+  return petugasList.value.filter((p) => p.status?.toLowerCase() !== 'aktif').length
+})
+
+const totalKarung = computed(() => {
+  return petugasList.value.reduce((sum, p) => sum + (p.total_karung || 0), 0)
+})
+
 // Hapus petugas
-const deleteItem = async (id) => {
+const deleteItem = async (id, nama) => {
   $q.dialog({
     title: 'Konfirmasi Hapus',
-    message: 'Yakin ingin menghapus petugas ini?',
+    message: `Yakin ingin menghapus petugas <strong>${nama}</strong>?`,
+    html: true,
     cancel: true,
     persistent: true,
   }).onOk(async () => {
     try {
-      await axios.delete(`http://127.0.0.1:5000/api/petugas/${id}`)
+      const token = localStorage.getItem('token')
 
-      // Remove from local list
-      petugasList.value = petugasList.value.filter((p) => p.id !== id)
+      await axios.delete(`${API_URL}/api/petugas/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      await loadPetugas()
 
       $q.notify({
         type: 'positive',
         message: 'Petugas berhasil dihapus!',
         position: 'top',
+        timeout: 2000,
       })
     } catch (err) {
       console.error(err)
+
+      let errorMessage = 'Gagal menghapus petugas'
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message
+      }
+
       $q.notify({
         type: 'negative',
-        message: 'Gagal menghapus petugas',
+        message: errorMessage,
         position: 'top',
       })
     }
@@ -226,6 +339,18 @@ const editItem = (petugas) => {
     name: 'EditPetugas',
     params: { id: petugas.id },
   })
+}
+
+const assignShift = (petugas) => {
+  router.push({
+    name: 'JadwalPetugas',
+    params: { id: petugas.id },
+    query: { nama: petugas.nama_petugas },
+  })
+}
+
+const refreshData = () => {
+  loadPetugas()
 }
 
 // Lifecycle
@@ -262,6 +387,15 @@ onMounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
+.stat-card {
+  border-radius: 12px;
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
 .data-item {
   border-radius: 8px;
   margin-bottom: 4px;
@@ -270,7 +404,6 @@ onMounted(() => {
 
 .data-item:hover {
   background-color: #f5f9f7;
-  transform: translateX(2px);
 }
 
 .status-badge {
@@ -282,5 +415,14 @@ onMounted(() => {
 
 .text-primary {
   color: #006837 !important;
+}
+
+/* FIX: Pastikan button bisa diklik */
+:deep(.q-item__section--side) {
+  pointer-events: auto !important;
+}
+
+.action-btn {
+  cursor: pointer !important;
 }
 </style>

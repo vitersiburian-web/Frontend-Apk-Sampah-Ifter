@@ -1,900 +1,496 @@
 <template>
-  <q-page class="q-pa-lg bg-grey-1">
-    <!-- Header -->
-    <div class="row items-center q-mb-xl">
-      <q-btn
-        flat
-        round
-        icon="arrow_back"
-        color="primary"
-        @click="$router.back()"
-        class="bg-white shadow-2 q-mr-md"
-        size="md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold text-primary q-mb-xs">Penjadwalan Pengambilan</div>
-        <div class="text-body2 text-grey-6">
-          Atur waktu, petugas, dan lokasi operasional pengambilan sampah
-        </div>
+  <q-page class="q-pa-md bg-green-1">
+    <div class="row items-center q-mb-md">
+      <q-btn flat round icon="arrow_back" @click="goBack" />
+      <div class="text-h6 q-ml-md text-weight-bold text-dark">
+        {{ isEdit ? 'Edit Jadwal' : 'Tambah Jadwal Pengambilan' }}
       </div>
     </div>
 
-    <!-- Form Jadwal -->
-    <div class="q-mb-xl">
-      <q-card class="shadow-5" style="border-radius: 16px; overflow: hidden">
-        <!-- Card Header -->
-        <q-card-section class="bg-primary-gradient text-white q-pb-lg">
-          <div class="row items-center">
-            <q-icon name="calendar_month" size="28px" class="q-mr-sm" />
-            <div class="text-h6 text-weight-bold">
-              {{ isEdit ? 'Edit Jadwal' : 'Buat Jadwal Baru' }}
-            </div>
-          </div>
-          <div class="text-caption q-mt-xs opacity-80">
-            {{
-              isEdit
-                ? 'Edit jadwal yang sudah ada'
-                : 'Isi form berikut untuk membuat jadwal pengambilan baru'
-            }}
-          </div>
-        </q-card-section>
+    <q-form @submit="onSubmit" class="q-gutter-y-md">
+      <q-card class="form-card">
+        <q-card-section>
+          <div class="text-subtitle1 text-weight-bold q-mb-sm">Informasi Jadwal</div>
 
-        <!-- Form Content -->
-        <q-card-section class="q-px-xl q-pt-xl q-pb-lg">
-          <q-form @submit.prevent="onSave" class="q-gutter-y-xl">
-            <!-- Tanggal Section -->
-            <div class="form-section">
-              <div class="section-label">
-                <q-icon name="calendar_today" size="sm" class="q-mr-sm" color="primary" />
-                <div class="text-subtitle1 text-weight-bold text-grey-9">Tanggal Pengambilan</div>
-              </div>
+          <!-- Tanggal -->
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-md-6">
               <q-input
-                filled
-                v-model="tanggalDisplay"
-                placeholder="Pilih tanggal"
-                bg-color="grey-2"
-                class="input-field"
+                v-model="form.tanggal"
+                label="Tanggal"
+                outlined
+                dense
+                type="date"
                 :rules="[(val) => !!val || 'Tanggal wajib diisi']"
+                :min="minDate"
               >
-                <template v-slot:prepend>
-                  <q-icon name="event" color="primary" />
-                </template>
                 <template v-slot:append>
-                  <q-icon name="keyboard_arrow_down" class="cursor-pointer" />
-                </template>
-                <template v-slot:after>
-                  <q-btn
-                    round
-                    dense
-                    flat
-                    icon="event"
-                    color="primary"
-                    @click="showDatePicker = true"
-                  >
+                  <q-icon name="event" class="cursor-pointer">
                     <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                      <q-date
-                        v-model="form.tanggal"
-                        color="primary"
-                        today-btn
-                        mask="YYYY-MM-DD"
-                        @update:model-value="showDatePicker = false"
-                      >
-                        <div class="row items-center justify-end q-pa-sm">
-                          <q-btn v-close-popup label="Pilih" color="primary" flat />
-                        </div>
-                      </q-date>
+                      <q-date v-model="form.tanggal" mask="YYYY-MM-DD" />
                     </q-popup-proxy>
-                  </q-btn>
+                  </q-icon>
                 </template>
               </q-input>
             </div>
-
-            <!-- Jam Section -->
-            <div class="form-section">
-              <div class="section-label">
-                <q-icon name="schedule" size="sm" class="q-mr-sm" color="primary" />
-                <div class="text-subtitle1 text-weight-bold text-grey-9">Waktu Operasional</div>
-              </div>
-              <div class="row q-col-gutter-md">
-                <div class="col-12 col-sm-6">
-                  <q-input
-                    filled
-                    v-model="form.jam_mulai"
-                    placeholder="00:00"
-                    bg-color="grey-2"
-                    class="input-field"
-                    :rules="[(val) => !!val || 'Jam mulai wajib diisi']"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="play_circle" color="green-7" />
-                    </template>
-                    <template v-slot:after>
-                      <q-btn round dense flat icon="access_time" color="primary">
-                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                          <q-time v-model="form.jam_mulai" format24h color="primary" />
-                        </q-popup-proxy>
-                      </q-btn>
-                    </template>
-                  </q-input>
-                  <div class="text-caption text-grey-6 q-mt-xs">Jam Mulai</div>
-                </div>
-                <div class="col-12 col-sm-6">
-                  <q-input
-                    filled
-                    v-model="form.jam_selesai"
-                    placeholder="23:59"
-                    bg-color="grey-2"
-                    class="input-field"
-                    :rules="[(val) => !!val || 'Jam selesai wajib diisi']"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="stop_circle" color="red-7" />
-                    </template>
-                    <template v-slot:after>
-                      <q-btn round dense flat icon="access_time" color="primary">
-                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                          <q-time v-model="form.jam_selesai" format24h color="primary" />
-                        </q-popup-proxy>
-                      </q-btn>
-                    </template>
-                  </q-input>
-                  <div class="text-caption text-grey-6 q-mt-xs">Jam Selesai</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Petugas Section -->
-            <div class="form-section">
-              <div class="section-label">
-                <q-icon name="groups" size="sm" class="q-mr-sm" color="primary" />
-                <div class="text-subtitle1 text-weight-bold text-grey-9">Petugas Bertugas</div>
-              </div>
+            <div class="col-12 col-md-6">
               <q-select
-                filled
-                v-model="form.petugas_ids"
-                multiple
-                :options="opsiPetugas"
-                use-chips
-                stack-label
-                option-label="nama_petugas"
-                option-value="id"
-                emit-value
-                map-options
-                bg-color="grey-2"
-                class="input-field"
-                :rules="[(val) => (val && val.length > 0) || 'Minimal pilih 1 petugas']"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="person" color="primary" />
-                </template>
-                <template v-slot:selected-item="scope">
-                  <q-chip
-                    dense
-                    removable
-                    @remove="scope.removeAtIndex(scope.index)"
-                    color="primary"
-                    text-color="white"
-                    class="q-ma-xs"
-                  >
-                    {{ scope.opt.nama_petugas }}
-                  </q-chip>
-                </template>
-              </q-select>
-              <div class="text-caption text-grey-6 q-mt-xs">
-                Pilih petugas yang akan bertugas pada jadwal ini
-              </div>
+                v-model="form.status"
+                label="Status"
+                outlined
+                dense
+                :options="statusOptions"
+                :rules="[(val) => !!val || 'Status wajib dipilih']"
+              />
             </div>
+          </div>
 
-            <!-- Wilayah Section -->
-            <div class="form-section">
-              <div class="section-label">
-                <q-icon name="location_on" size="sm" class="q-mr-sm" color="primary" />
-                <div class="text-subtitle1 text-weight-bold text-grey-9">Lokasi & Wilayah</div>
-              </div>
+          <!-- Jam -->
+          <div class="row q-col-gutter-md q-mt-sm">
+            <div class="col-12 col-md-6">
               <q-input
-                filled
-                v-model="form.keterangan"
-                type="textarea"
-                rows="3"
-                bg-color="grey-2"
-                class="input-field"
-                placeholder="Contoh: Blok A Perumahan Griya Asri, Fokus pada RT 01-05"
-                :rules="[(val) => !!val || 'Lokasi wajib diisi']"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="place" color="primary" />
-                </template>
-              </q-input>
+                v-model="form.jam_mulai"
+                label="Jam Mulai"
+                outlined
+                dense
+                type="time"
+                :rules="[(val) => !!val || 'Jam mulai wajib diisi']"
+              />
             </div>
-
-            <!-- Submit Button -->
-            <div class="row q-col-gutter-md q-mt-lg">
-              <div class="col-12 col-sm-8 offset-sm-2">
-                <q-btn
-                  :label="isEdit ? 'Update Jadwal' : 'Publikasikan Jadwal'"
-                  :color="isEdit ? 'warning' : 'primary'"
-                  :icon="isEdit ? 'update' : 'publish'"
-                  class="full-width q-py-md"
-                  size="lg"
-                  rounded
-                  unelevated
-                  type="submit"
-                />
-              </div>
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="form.jam_selesai"
+                label="Jam Selesai"
+                outlined
+                dense
+                type="time"
+                :rules="[(val) => !!val || 'Jam selesai wajib diisi']"
+              />
             </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </div>
+          </div>
 
-    <!-- Info & Statistik Section -->
-    <div class="row q-col-gutter-lg q-mb-xl">
-      <!-- Tips Card -->
-      <div class="col-12 col-md-6">
-        <q-card class="shadow-3" style="border-radius: 16px; border-left: 4px solid #4caf50">
-          <q-card-section class="q-pa-md">
-            <div class="row items-center q-mb-sm">
-              <q-icon name="info" color="green-7" size="24px" class="q-mr-md" />
-              <div class="text-subtitle2 text-weight-bold text-grey-9">Tips Penjadwalan</div>
-            </div>
-            <div class="text-caption text-grey-7 q-pl-lg">
-              • Pastikan tanggal dan waktu sesuai dengan ketersediaan petugas<br />
-              • Beri keterangan lokasi yang jelas untuk memudahkan operasional<br />
-              • Minimal 1 petugas harus ditugaskan untuk setiap jadwal<br />
-              • Periksa jadwal yang sudah ada agar tidak bertabrakan
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- Statistik Card -->
-      <div class="col-12 col-md-6">
-        <q-card class="shadow-3" style="border-radius: 16px">
-          <q-card-section class="q-pa-md">
-            <div class="text-subtitle2 text-weight-bold text-grey-9 q-mb-md">Statistik Jadwal</div>
-            <div class="row q-col-gutter-md">
-              <div class="col-6">
-                <div class="text-center q-pa-sm bg-blue-1 rounded-borders">
-                  <div class="text-h6 text-weight-bold text-primary">{{ jadwals.length }}</div>
-                  <div class="text-caption text-grey-7">Total Jadwal</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="text-center q-pa-sm bg-green-1 rounded-borders">
-                  <div class="text-h6 text-weight-bold text-green-9">
-                    {{ activeSchedules }}
-                  </div>
-                  <div class="text-caption text-grey-7">Aktif</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="text-center q-pa-sm bg-orange-1 rounded-borders">
-                  <div class="text-h6 text-weight-bold text-orange-9">
-                    {{ opsiPetugas.length }}
-                  </div>
-                  <div class="text-caption text-grey-7">Petugas Tersedia</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="text-center q-pa-sm bg-purple-1 rounded-borders">
-                  <div class="text-h6 text-weight-bold text-purple-9">
-                    {{ todaySchedules }}
-                  </div>
-                  <div class="text-caption text-grey-7">Hari Ini</div>
-                </div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- Daftar Jadwal Section -->
-    <div class="q-mb-lg">
-      <div class="row items-center justify-between q-mb-md">
-        <div class="text-h5 text-weight-bold text-primary">Daftar Jadwal</div>
-        <div class="row items-center q-gutter-sm">
-          <q-btn round flat icon="refresh" color="primary" size="sm" @click="fetchJadwals" />
-          <q-badge color="primary" :label="`${jadwals.length} Jadwal`" />
-        </div>
-      </div>
-
-      <q-card class="shadow-5" style="border-radius: 16px; overflow: hidden">
-        <q-card-section class="q-pa-none">
-          <q-table
-            :rows="jadwals"
-            :columns="columns"
-            row-key="id"
-            flat
-            bordered
-            :pagination="{ rowsPerPage: 10 }"
-            class="schedule-table"
-            :loading="loading"
-          >
-            <!-- Loading State -->
-            <template v-slot:loading>
-              <q-inner-loading showing color="primary" />
-            </template>
-
-            <!-- Tanggal Column -->
-            <template v-slot:body-cell-tanggal="props">
-              <q-td :props="props">
-                <div class="column">
-                  <div class="text-weight-medium text-primary">
-                    {{ formatTanggal(props.row.tanggal) }}
-                  </div>
-                  <div class="text-caption text-grey-6">
-                    {{ getDayName(props.row.tanggal) }}
-                  </div>
-                </div>
-              </q-td>
-            </template>
-
-            <!-- Jam Column -->
-            <template v-slot:body-cell-jam="props">
-              <q-td :props="props">
-                <div class="row items-center no-wrap">
-                  <div class="column q-mr-md">
-                    <div class="row items-center q-mb-xs">
-                      <q-icon name="schedule" size="14px" class="q-mr-xs text-green-7" />
-                      <span class="text-weight-medium">{{ props.row.jam_mulai }}</span>
-                    </div>
-                    <div class="row items-center">
-                      <q-icon name="update" size="14px" class="q-mr-xs text-red-7" />
-                      <span class="text-weight-medium">{{ props.row.jam_selesai }}</span>
-                    </div>
-                  </div>
-                </div>
-              </q-td>
-            </template>
-
-            <!-- Wilayah Column -->
-            <template v-slot:body-cell-wilayah="props">
-              <q-td :props="props">
-                <div class="text-body2" style="max-width: 200px; white-space: normal">
-                  {{ props.row.wilayah }}
-                </div>
-              </q-td>
-            </template>
-
-            <!-- Status Column -->
-            <template v-slot:body-cell-status="props">
-              <q-td :props="props">
-                <q-badge
-                  :color="props.row.status === 'aktif' ? 'green' : 'grey'"
-                  :label="props.row.status === 'aktif' ? 'Aktif' : 'Nonaktif'"
-                  rounded
-                />
-              </q-td>
-            </template>
-
-            <!-- Actions Column -->
-            <template v-slot:body-cell-actions="props">
-              <q-td :props="props" align="center">
-                <q-btn
-                  flat
-                  round
+          <!-- Petugas Bertugas (Multiple Selection) -->
+          <div class="q-mt-sm">
+            <q-select
+              v-model="form.petugas_ids"
+              label="Petugas Bertugas"
+              multiple
+              outlined
+              dense
+              :options="petugasOptions"
+              option-label="nama"
+              option-value="id"
+              emit-value
+              map-options
+              :rules="[(val) => (val && val.length > 0) || 'Minimal pilih 1 petugas']"
+              use-chips
+            >
+              <template v-slot:selected-item="scope">
+                <q-chip
                   dense
-                  icon="edit"
+                  removable
+                  @remove="removePetugas(scope.opt.id)"
                   color="primary"
-                  size="sm"
-                  @click="loadJadwal(props.row)"
-                  class="q-mr-xs"
-                />
-                <q-btn
-                  flat
-                  round
-                  dense
-                  :icon="props.row.status === 'aktif' ? 'pause' : 'play_arrow'"
-                  :color="props.row.status === 'aktif' ? 'warning' : 'green'"
-                  size="sm"
-                  @click="toggleStatus(props.row)"
-                />
-              </q-td>
-            </template>
+                  text-color="white"
+                  class="q-ma-xs"
+                >
+                  {{ scope.opt.nama }}
+                </q-chip>
+              </template>
 
-            <!-- Empty State -->
-            <template v-slot:no-data>
-              <div class="full-width row flex-center text-grey q-gutter-sm q-pa-xl">
-                <q-icon name="calendar_today" size="3em" color="grey-5" />
-                <div class="text-center">
-                  <div class="text-subtitle1 text-grey-7 q-mb-xs">Belum ada jadwal yang dibuat</div>
-                  <div class="text-caption text-grey-5">
-                    Mulai dengan membuat jadwal baru di atas
-                  </div>
-                </div>
-              </div>
-            </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-avatar color="primary" text-color="white">
+                      {{ scope.opt.nama.charAt(0) }}
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.nama }}</q-item-label>
+                    <q-item-label caption>{{ scope.opt.no_telepon }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+          </div>
 
-            <!-- Pagination Customization -->
-            <template v-slot:pagination="scope">
-              <q-btn
-                v-if="scope.pagesNumber > 2"
-                icon="first_page"
-                color="grey"
-                round
-                flat
-                dense
-                :disable="scope.isFirstPage"
-                @click="scope.firstPage"
-              />
-              <q-btn
-                icon="chevron_left"
-                color="grey"
-                round
-                flat
-                dense
-                :disable="scope.isFirstPage"
-                @click="scope.prevPage"
-              />
+          <!-- Wilayah -->
+          <div class="q-mt-sm">
+            <q-input
+              v-model="form.wilayah"
+              label="Wilayah/Lokasi"
+              outlined
+              dense
+              type="textarea"
+              rows="2"
+              placeholder="Contoh: Perumahan Griya Asri, RT 01-05, Kelurahan Suraja"
+              :rules="[(val) => !!val || 'Wilayah wajib diisi']"
+            />
+          </div>
 
-              <div class="q-mx-lg text-caption text-grey-7">
-                Halaman {{ scope.pagination.page }} dari {{ scope.pagesNumber }}
-              </div>
-
-              <q-btn
-                icon="chevron_right"
-                color="grey"
-                round
-                flat
-                dense
-                :disable="scope.isLastPage"
-                @click="scope.nextPage"
-              />
-              <q-btn
-                v-if="scope.pagesNumber > 2"
-                icon="last_page"
-                color="grey"
-                round
-                flat
-                dense
-                :disable="scope.isLastPage"
-                @click="scope.lastPage"
-              />
-            </template>
-          </q-table>
-        </q-card-section>
-
-        <q-card-section class="q-pt-md bg-grey-1">
-          <div class="text-caption text-grey-7 text-center">
-            <q-icon name="info" size="xs" class="q-mr-xs" />
-            Klik ikon edit untuk mengubah jadwal atau ikon play/pause untuk mengubah status
+          <!-- Keterangan -->
+          <div class="q-mt-sm">
+            <q-input
+              v-model="form.keterangan"
+              label="Keterangan"
+              outlined
+              dense
+              type="textarea"
+              rows="2"
+              placeholder="Catatan tambahan tentang jadwal (opsional)"
+            />
           </div>
         </q-card-section>
+
+        <q-card-actions class="q-pa-md">
+          <q-btn label="Batal" color="grey" flat @click="goBack" class="q-mr-sm" />
+          <q-space />
+          <q-btn
+            :label="isEdit ? 'Update' : 'Simpan'"
+            color="primary"
+            type="submit"
+            :loading="loading"
+          />
+        </q-card-actions>
       </q-card>
-    </div>
+    </q-form>
   </q-page>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import axios from 'axios'
 
+const route = useRoute()
+const router = useRouter()
 const $q = useQuasar()
 
-const jadwals = ref([])
-const opsiPetugas = reactive([])
-const showDatePicker = ref(false)
-const loading = ref(false)
-
-const form = reactive({
-  tanggal: '',
-  jam_mulai: '',
-  jam_selesai: '',
-  petugas_ids: [],
-  keterangan: '',
-})
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
 
 const isEdit = ref(false)
-const editingId = ref(null)
+const loading = ref(false)
+const petugasList = ref([])
 
-const tanggalDisplay = computed({
-  get: () => {
-    if (!form.tanggal) return ''
-    try {
-      const date = new Date(form.tanggal)
-      return date.toLocaleDateString('id-ID', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    } catch {
-      return form.tanggal
-    }
-  },
-  set: (val) => {
-    form.tanggal = val.replace(/\//g, '-')
-  },
-})
-
-const activeSchedules = computed(() => {
-  return jadwals.value.filter((j) => j.status === 'aktif').length
-})
-
-const todaySchedules = computed(() => {
-  const today = new Date().toISOString().split('T')[0]
-  return jadwals.value.filter((j) => {
-    const jadwalDate = j.tanggal.split(' ')[0] // Ambil hanya tanggalnya
-    return jadwalDate === today && j.status === 'aktif'
-  }).length
-})
-
-// Columns QTable
-const columns = [
-  {
-    name: 'tanggal',
-    label: 'Tanggal',
-    field: 'tanggal',
-    align: 'left',
-    sortable: true,
-    style: 'min-width: 150px;',
-  },
-  {
-    name: 'jam',
-    label: 'Waktu',
-    field: 'jam_mulai',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'wilayah',
-    label: 'Lokasi',
-    field: 'wilayah',
-    align: 'left',
-    sortable: true,
-    style: 'min-width: 200px; max-width: 300px;',
-  },
-  {
-    name: 'nama_petugas',
-    label: 'Petugas',
-    field: 'nama_petugas',
-    align: 'left',
-    sortable: true,
-    style: 'min-width: 150px;',
-  },
-  {
-    name: 'status',
-    label: 'Status',
-    field: 'status',
-    align: 'center',
-    sortable: true,
-    style: 'width: 100px;',
-  },
-  {
-    name: 'actions',
-    label: 'Aksi',
-    align: 'center',
-    style: 'width: 120px;',
-  },
+// Options
+const statusOptions = [
+  { label: 'Aktif', value: 'aktif' },
+  { label: 'Nonaktif', value: 'nonaktif' },
 ]
 
-// Helper functions
-const padTime = (time) => {
-  if (!time) return ''
-  const [h, m] = time.split(':')
-  return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`
-}
+// Form data
+const form = ref({
+  tanggal: '',
+  jam_mulai: '08:00',
+  jam_selesai: '12:00',
+  wilayah: '',
+  keterangan: '',
+  status: 'aktif',
+  petugas_ids: [], // Array of petugas IDs
+})
 
-const formatTanggal = (tgl) => {
-  if (!tgl || tgl === '0000-00-00') return ''
+// Petugas options from database
+const petugasOptions = computed(() => {
+  return petugasList.value.map((petugas) => ({
+    id: petugas.id,
+    nama:
+      petugas.nama_lengkap || petugas.nama_petugas || petugas.username || `Petugas ${petugas.id}`,
+    no_telepon: petugas.no_telepon || petugas.no_telp || '-',
+  }))
+})
+
+// Minimum date for date picker (today)
+const minDate = computed(() => {
+  const today = new Date()
+  return today.toISOString().split('T')[0]
+})
+
+// Load petugas data
+// Di loadPetugas, tambahkan debugging:
+const loadPetugas = async () => {
   try {
-    if (typeof tgl === 'string') {
-      const datePart = tgl.split(' ')[0] // Ambil hanya tanggal jika ada waktu
-      const [year, month, day] = datePart.split('-')
-      return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`
+    const token = localStorage.getItem('token')
+    console.log('Loading petugas...')
+
+    const response = await axios.get(`${API_URL}/api/petugas/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    console.log('Petugas API Response:', response.data)
+
+    if (response.data.success) {
+      petugasList.value = response.data.data
+      console.log('Petugas loaded:', petugasList.value)
+      console.log('Total petugas:', petugasList.value.length)
+    } else {
+      console.error('Petugas API not successful:', response.data)
     }
-    return tgl
-  } catch {
-    return tgl
-  }
-}
+  } catch (error) {
+    console.error('Error loading petugas:', error)
+    console.error('Error details:', error.response?.data || error.message)
 
-const getDayName = (tgl) => {
-  if (!tgl) return ''
-  try {
-    const date = new Date(tgl.split(' ')[0])
-    return date.toLocaleDateString('id-ID', { weekday: 'long' })
-  } catch {
-    return ''
-  }
-}
-
-// API Functions
-const fetchJadwals = async () => {
-  loading.value = true
-  try {
-    const res = await axios.get('http://localhost:5000/api/jadwal/list')
-    if (res.data.success) {
-      jadwals.value = res.data.data
-    }
-  } catch {
     $q.notify({
       type: 'negative',
-      message: 'Gagal mengambil data jadwal',
+      message: 'Gagal memuat data petugas',
       position: 'top',
-      timeout: 3000,
+    })
+  }
+}
+
+// Load jadwal data for edit
+// Load jadwal data for edit
+const loadJadwalData = async (id) => {
+  loading.value = true
+  try {
+    const token = localStorage.getItem('token')
+    console.log(`Loading jadwal data for ID: ${id}`)
+
+    const response = await axios.get(`${API_URL}/api/jadwal/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    console.log('API Response for jadwal detail:', response.data)
+
+    if (response.data.success) {
+      const data = response.data.data
+
+      // Debug log untuk melihat struktur data
+      console.log('Raw data from API:', data)
+      console.log('Petugas IDs from API:', data.petugas_ids)
+
+      // Format tanggal untuk input date
+      const tanggal = data.tanggal ? data.tanggal.split('T')[0] : ''
+
+      form.value = {
+        tanggal: tanggal,
+        jam_mulai: data.jam_mulai?.slice(0, 5) || '08:00',
+        jam_selesai: data.jam_selesai?.slice(0, 5) || '12:00',
+        wilayah: data.wilayah || '',
+        keterangan: data.keterangan || '',
+        status: data.status || 'aktif',
+        petugas_ids: data.petugas_ids || [], // <-- PERUBAHAN DI SINI
+      }
+
+      console.log('Form setelah diisi:', form.value)
+    } else {
+      console.error('API tidak success:', response.data)
+      $q.notify({
+        type: 'negative',
+        message: response.data.message || 'Gagal memuat data jadwal',
+        position: 'top',
+      })
+    }
+  } catch (error) {
+    console.error('Error loading jadwal:', error)
+    console.error('Error details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url,
+    })
+
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Gagal memuat data jadwal',
+      position: 'top',
     })
   } finally {
     loading.value = false
   }
 }
 
-const fetchPetugas = async () => {
-  try {
-    const res = await axios.get('http://localhost:5000/api/petugas')
-    if (res.data.success) {
-      opsiPetugas.length = 0
-      opsiPetugas.push(...res.data.data)
-    }
-  } catch {
-    $q.notify({
-      type: 'negative',
-      message: 'Gagal mengambil data petugas',
-      position: 'top',
-      timeout: 3000,
-    })
-  }
+// Remove petugas from selection
+const removePetugas = (petugasId) => {
+  form.value.petugas_ids = form.value.petugas_ids.filter((id) => id !== petugasId)
 }
 
-const toggleStatus = async (jadwal) => {
-  $q.dialog({
-    title: 'Konfirmasi',
-    message: `Apakah Anda yakin ingin ${jadwal.status === 'aktif' ? 'menonaktifkan' : 'mengaktifkan'} jadwal ini?`,
-    cancel: true,
-    persistent: true,
-  }).onOk(async () => {
+// On mount
+// Di onMounted, tambahkan:
+onMounted(async () => {
+  console.log('=== DEBUG MODE ===')
+  console.log('Route name:', route.name)
+  console.log('Route params:', route.params)
+  console.log('Route path:', route.path)
+  console.log('Is edit mode?', route.name === 'EditJadwal' && route.params.id)
+
+  await loadPetugas()
+
+  if (route.name === 'EditJadwal' && route.params.id) {
+    isEdit.value = true
+    console.log('Loading edit mode for jadwal ID:', route.params.id)
+
+    // Coba langsung hit API untuk debug
     try {
-      await axios.patch(`http://localhost:5000/api/jadwal/${jadwal.id}/toggle-status`)
-
-      $q.notify({
-        type: 'positive',
-        message: `Jadwal berhasil ${jadwal.status === 'aktif' ? 'dinonaktifkan' : 'diaktifkan'}`,
-        position: 'top',
-        timeout: 3000,
-        icon: 'check_circle',
+      const token = localStorage.getItem('token')
+      const testResponse = await axios.get(`${API_URL}/api/jadwal/${route.params.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
-
-      fetchJadwals()
-    } catch (error) {
-      console.error('Error toggling status:', error)
-      $q.notify({
-        type: 'negative',
-        message: error.response?.data?.message || 'Gagal mengubah status jadwal',
-        position: 'top',
-        timeout: 3000,
-      })
+      console.log('TEST API Response:', testResponse.data)
+    } catch (testError) {
+      console.error('TEST API Error:', testError.response?.data || testError.message)
     }
-  })
-}
 
-const loadJadwal = async (jadwal) => {
-  isEdit.value = true
-  editingId.value = jadwal.id
-
-  if (jadwal.tanggal) {
-    if (jadwal.tanggal.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      form.tanggal = jadwal.tanggal
-    } else if (jadwal.tanggal.includes(' ')) {
-      form.tanggal = jadwal.tanggal.split(' ')[0]
-    } else {
-      form.tanggal = jadwal.tanggal
-    }
+    await loadJadwalData(route.params.id)
+  } else {
+    console.log('Add mode - no ID found')
   }
+})
+// Submit form
+async function onSubmit() {
+  console.log('Submitting form...', form.value)
 
-  form.jam_mulai = padTime(jadwal.jam_mulai?.slice(0, 5) || '')
-  form.jam_selesai = padTime(jadwal.jam_selesai?.slice(0, 5) || '')
-  form.keterangan = jadwal.wilayah || ''
-
-  try {
-    const res = await axios.get(`http://localhost:5000/api/jadwal/${jadwal.id}`)
-    if (res.data.success) form.petugas_ids = res.data.data.petugas_ids || []
-
-    // Scroll ke form
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  } catch {
-    $q.notify({
-      type: 'negative',
-      message: 'Gagal memuat data petugas',
-      position: 'top',
-      timeout: 3000,
-    })
-  }
-}
-
-const onSave = async () => {
+  // Validasi
   if (
-    !form.tanggal ||
-    !form.jam_mulai ||
-    !form.jam_selesai ||
-    !form.keterangan ||
-    form.petugas_ids.length === 0
+    !form.value.tanggal ||
+    !form.value.jam_mulai ||
+    !form.value.jam_selesai ||
+    !form.value.wilayah
   ) {
     $q.notify({
       type: 'warning',
-      message: 'Mohon lengkapi semua field yang wajib diisi',
+      message: 'Tanggal, jam, dan wilayah wajib diisi',
       position: 'top',
-      timeout: 3000,
     })
     return
   }
 
-  const tanggal = form.tanggal.includes('/') ? form.tanggal.replace(/\//g, '-') : form.tanggal
-
-  const payload = {
-    tanggal: tanggal,
-    jam_mulai: form.jam_mulai.length === 5 ? form.jam_mulai + ':00' : form.jam_mulai,
-    jam_selesai: form.jam_selesai.length === 5 ? form.jam_selesai + ':00' : form.jam_selesai,
-    wilayah: form.keterangan,
-    petugas_ids: form.petugas_ids,
-    status: 'aktif',
+  // Validasi petugas
+  if (form.value.petugas_ids.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'Minimal pilih 1 petugas',
+      position: 'top',
+    })
+    return
   }
 
-  $q.loading.show({
-    message: isEdit.value ? 'Memperbarui jadwal...' : 'Menyimpan jadwal...',
-    boxClass: 'bg-grey-2 text-grey-9',
-  })
+  // Validasi jam
+  if (form.value.jam_mulai >= form.value.jam_selesai) {
+    $q.notify({
+      type: 'warning',
+      message: 'Jam mulai harus lebih awal dari jam selesai',
+      position: 'top',
+    })
+    return
+  }
+
+  loading.value = true
 
   try {
-    let res
-    if (isEdit.value) {
-      res = await axios.patch(`http://localhost:5000/api/jadwal/${editingId.value}`, payload)
-    } else {
-      res = await axios.post('http://localhost:5000/api/jadwal/multi', payload)
+    const token = localStorage.getItem('token')
+    if (!token) {
+      $q.notify({
+        type: 'negative',
+        message: 'Token tidak ditemukan. Silakan login kembali.',
+        position: 'top',
+      })
+      router.push('/login')
+      return
     }
 
-    if (res.data.success) {
+    // Format data untuk dikirim
+    const dataToSend = {
+      tanggal: form.value.tanggal,
+      jam_mulai: form.value.jam_mulai,
+      jam_selesai: form.value.jam_selesai,
+      wilayah: form.value.wilayah,
+      keterangan: form.value.keterangan || '',
+      status: form.value.status,
+      petugas_ids: form.value.petugas_ids, // Array petugas IDs
+    }
+
+    console.log('Data to send to API:', dataToSend)
+
+    let response
+    let url
+
+    if (isEdit.value) {
+      // PATCH untuk update - ke endpoint /api/jadwal/<id>
+      url = `${API_URL}/api/jadwal/${route.params.id}`
+      console.log('UPDATE URL:', url)
+
+      response = await axios.patch(url, dataToSend, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+    } else {
+      // POST untuk create - ke endpoint /api/jadwal/multi
+      url = `${API_URL}/api/jadwal/multi`
+      console.log('CREATE URL:', url)
+
+      response = await axios.post(url, dataToSend, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+    }
+
+    console.log('API Response:', response.data)
+
+    if (response.data.success) {
       $q.notify({
         type: 'positive',
-        message: res.data.message,
+        message:
+          response.data.message ||
+          (isEdit.value ? 'Jadwal berhasil diupdate!' : 'Jadwal baru berhasil ditambahkan!'),
         position: 'top',
         timeout: 3000,
-        icon: 'check_circle',
       })
 
-      resetForm()
-      fetchJadwals()
+      setTimeout(() => {
+        router.push('/admin/jadwal')
+      }, 1000)
+    } else {
+      $q.notify({
+        type: 'warning',
+        message: response.data.message || 'Gagal menyimpan jadwal',
+        position: 'top',
+      })
     }
-  } catch (err) {
+  } catch (error) {
+    console.error('Error saving jadwal:', error)
+    console.error('Error response:', error.response?.data)
+    console.error('Error status:', error.response?.status)
+    console.error('Error URL:', error.config?.url)
+    console.error('Error method:', error.config?.method)
+
+    let errorMessage = 'Terjadi kesalahan saat menyimpan jadwal'
+
+    // Jika error 405, beri pesan spesifik
+    if (error.response?.status === 405) {
+      errorMessage = 'Method HTTP tidak diizinkan. Silakan periksa endpoint API.'
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.response?.data?.errors) {
+      errorMessage = Array.isArray(error.response.data.errors)
+        ? error.response.data.errors.join(', ')
+        : error.response.data.errors
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
     $q.notify({
       type: 'negative',
-      message: err.response?.data?.message || 'Terjadi kesalahan server',
+      message: errorMessage,
       position: 'top',
-      timeout: 3000,
+      timeout: 5000,
     })
   } finally {
-    $q.loading.hide()
+    loading.value = false
   }
 }
 
-const resetForm = () => {
-  form.tanggal = ''
-  form.jam_mulai = ''
-  form.jam_selesai = ''
-  form.keterangan = ''
-  form.petugas_ids = []
-  isEdit.value = false
-  editingId.value = null
+function goBack() {
+  router.back()
 }
-
-onMounted(() => {
-  fetchJadwals()
-  fetchPetugas()
-})
 </script>
 
 <style scoped>
-/* Custom Styles */
-.bg-primary-gradient {
-  background: linear-gradient(135deg, #006837 0%, #4caf50 100%);
-}
-
-.form-section {
-  margin-bottom: 32px;
-}
-
-.section-label {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.input-field {
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.input-field:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.schedule-table {
-  font-size: 0.95em;
-}
-
-.schedule-table :deep(.q-table__top) {
-  border-bottom: 1px solid #e0e0e0;
-  padding: 16px;
-}
-
-.schedule-table :deep(.q-table tbody tr:hover) {
-  background-color: #f8f9fa !important;
-  transition: background-color 0.2s ease;
-}
-
-.schedule-table :deep(.q-table th) {
-  font-weight: 600;
-  color: #424242;
-  background-color: #f5f5f5;
-}
-
-.rounded-borders {
-  border-radius: 10px;
-  transition: transform 0.2s ease;
-}
-
-.rounded-borders:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-}
-
-.opacity-80 {
-  opacity: 0.8;
-}
-
-/* Smooth transitions */
-.q-card {
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-.q-card:hover {
-  transform: translateY(-2px);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .q-pa-lg {
-    padding: 16px;
-  }
-
-  .form-section {
-    margin-bottom: 24px;
-  }
-
-  .section-label {
-    margin-bottom: 8px;
-  }
-
-  .text-h5 {
-    font-size: 1.5rem;
-  }
-}
-
-/* Custom scrollbar for table */
-.schedule-table :deep(.q-table__container) {
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
-}
-
-.schedule-table :deep(.q-table__container::-webkit-scrollbar) {
-  width: 8px;
-  height: 8px;
-}
-
-.schedule-table :deep(.q-table__container::-webkit-scrollbar-track) {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.schedule-table :deep(.q-table__container::-webkit-scrollbar-thumb) {
-  background: #ccc;
-  border-radius: 4px;
-}
-
-.schedule-table :deep(.q-table__container::-webkit-scrollbar-thumb:hover) {
-  background: #aaa;
+.form-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 </style>
