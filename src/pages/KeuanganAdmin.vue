@@ -1,781 +1,1089 @@
 <template>
   <q-page class="q-pa-md bg-green-1">
-    <!-- HEADER -->
-    <div class="q-mb-lg">
-      <div class="text-h6 text-weight-bold text-primary q-mb-sm">Dashboard Keuangan</div>
-      <div class="text-caption text-grey-7">
-        Monitor pemasukan, pengeluaran, dan saldo berdasarkan rentang tanggal
+    <!-- Header -->
+    <div class="row items-center q-mb-md">
+      <div class="col">
+        <div class="text-h6 text-weight-bold text-dark">Keuangan</div>
+        <div class="text-caption text-grey-7">Kelola pemasukan dan pengeluaran</div>
       </div>
-    </div>
-
-    <!-- RANGE SELECTOR -->
-    <q-card flat class="q-pa-md q-mb-md shadow-1">
-      <div class="text-subtitle2 text-grey-8 q-mb-sm">Pilih Rentang Tanggal</div>
-      <div class="row items-center q-col-gutter-md">
-        <div class="col-md-5 col-12">
-          <q-input
-            filled
-            dense
-            v-model="range.start"
-            label="Dari Tanggal"
-            type="date"
-            stack-label
-          />
-        </div>
-        <div class="col-md-5 col-12">
-          <q-input
-            filled
-            dense
-            v-model="range.end"
-            label="Sampai Tanggal"
-            type="date"
-            stack-label
-          />
-        </div>
-        <div class="col-md-2 col-12 text-center">
+      <div class="col-auto">
+        <div class="row q-gutter-sm">
           <q-btn
-            color="primary"
-            label="Terapkan"
-            @click="applyDateRange"
-            :disable="!isDateRangeValid"
-            unelevated
+            label="Tambah Pemasukan"
+            color="positive"
+            icon="add"
+            @click="showAddPemasukan"
+            class="q-px-sm"
+          />
+          <q-btn
+            label="Tambah Pengeluaran"
+            color="negative"
+            icon="remove"
+            @click="showAddPengeluaran"
+            class="q-px-sm"
+          />
+          <q-btn icon="refresh" color="grey" flat round @click="loadData" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center q-py-lg">
+      <q-spinner color="primary" size="2em" />
+      <div class="text-grey-7 q-mt-sm">Memuat data keuangan...</div>
+    </div>
+
+    <!-- Main Content -->
+    <div v-else>
+      <!-- Stats Cards -->
+      <div class="row q-col-gutter-md q-mb-md">
+        <div class="col-6 col-md-3">
+          <q-card class="stat-card text-center bg-blue-1">
+            <q-card-section>
+              <div class="text-h6 text-blue">{{ formatCurrency(totalPemasukan) }}</div>
+              <div class="text-caption text-grey-7">Total Pemasukan</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-6 col-md-3">
+          <q-card class="stat-card text-center bg-red-1">
+            <q-card-section>
+              <div class="text-h6 text-red">{{ formatCurrency(totalPengeluaran) }}</div>
+              <div class="text-caption text-grey-7">Total Pengeluaran</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-6 col-md-3">
+          <q-card class="stat-card text-center bg-green-1">
+            <q-card-section>
+              <div class="text-h6 text-green">{{ formatCurrency(saldo) }}</div>
+              <div class="text-caption text-grey-7">Saldo</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-6 col-md-3">
+          <q-card class="stat-card text-center bg-orange-1">
+            <q-card-section>
+              <div class="text-h6 text-orange">{{ formatCurrency(rataPengeluaran) }}</div>
+              <div class="text-caption text-grey-7">Rata-rata/Bulan</div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Filter Section -->
+      <div class="row q-col-gutter-md q-mb-md">
+        <div class="col-12 col-md-3">
+          <q-select
+            v-model="filter.bulan"
+            label="Filter Bulan"
+            outlined
+            dense
+            :options="bulanOptions"
+            clearable
+            emit-value
+            map-options
           />
         </div>
-      </div>
-    </q-card>
-
-    <!-- OVERVIEW CARDS -->
-    <div class="row q-col-gutter-md q-mb-lg">
-      <!-- SALDO KARTU UTAMA -->
-      <div class="col-12">
-        <q-card class="balance-card bg-gradient-primary text-white">
-          <div class="row items-center">
-            <div class="col-8">
-              <q-card-section>
-                <div class="text-subtitle2 text-weight-medium opacity-80">Saldo Keseluruhan</div>
-                <div class="text-h4 text-weight-bold q-mt-sm">
-                  Rp {{ formatCurrency(totalKeseluruhan.saldo) }}
-                </div>
-                <div class="text-caption q-mt-xs opacity-80">
-                  Periode: {{ formatDateDisplay(range.start) }} - {{ formatDateDisplay(range.end) }}
-                </div>
-              </q-card-section>
-            </div>
-            <div class="col-4 text-right">
-              <q-icon name="account_balance_wallet" size="80px" class="opacity-20" />
-            </div>
-          </div>
-        </q-card>
-      </div>
-
-      <!-- INCOME & EXPENSE CARDS -->
-      <div class="col-md-6 col-12">
-        <q-card class="stat-card bg-white">
-          <q-card-section>
-            <div class="row items-center">
-              <div class="col-3">
-                <q-avatar color="green-1" text-color="green-8" size="lg">
-                  <q-icon name="trending_up" />
-                </q-avatar>
-              </div>
-              <div class="col-9">
-                <div class="text-subtitle2 text-grey-7">Total Pemasukan</div>
-                <div class="text-h6 text-weight-bold text-green-8">
-                  Rp {{ formatCurrency(totalKeseluruhan.income) }}
-                </div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-md-6 col-12">
-        <q-card class="stat-card bg-white">
-          <q-card-section>
-            <div class="row items-center">
-              <div class="col-3">
-                <q-avatar color="red-1" text-color="red-8" size="lg">
-                  <q-icon name="trending_down" />
-                </q-avatar>
-              </div>
-              <div class="col-9">
-                <div class="text-subtitle2 text-grey-7">Total Pengeluaran</div>
-                <div class="text-h6 text-weight-bold text-red-8">
-                  Rp {{ formatCurrency(totalKeseluruhan.expense) }}
-                </div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- CHART SECTION -->
-    <q-card class="q-mb-lg">
-      <q-card-section>
-        <div class="text-subtitle1 text-weight-bold text-primary">Trend Keuangan</div>
-        <div class="text-caption text-grey-7 q-mb-md">
-          Perkembangan saldo dalam periode terpilih
+        <div class="col-12 col-md-3">
+          <q-input
+            v-model="filter.tahun"
+            label="Tahun"
+            outlined
+            dense
+            type="number"
+            :min="2020"
+            :max="new Date().getFullYear()"
+            clearable
+          />
         </div>
+        <div class="col-12 col-md-3">
+          <q-select
+            v-model="filter.tipe"
+            label="Filter Tipe"
+            outlined
+            dense
+            :options="tipeOptions"
+            clearable
+            emit-value
+            map-options
+          />
+        </div>
+        <div class="col-12 col-md-3">
+          <q-input v-model="filter.search" label="Cari Keterangan" outlined dense clearable>
+            <template v-slot:append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </div>
+      </div>
 
-        <div class="chart-container">
-          <div class="chart-wrapper" @mouseleave="hideTooltip">
-            <svg :width="chartWidth" :height="chartHeight" viewBox="0 0 100 60" class="chart-svg">
-              <!-- Grid lines -->
-              <line
-                x1="0"
-                y1="15"
-                x2="100"
-                y2="15"
-                stroke="#e0e0e0"
-                stroke-width="0.5"
-                stroke-dasharray="2"
-              />
-              <line
-                x1="0"
-                y1="30"
-                x2="100"
-                y2="30"
-                stroke="#e0e0e0"
-                stroke-width="0.5"
-                stroke-dasharray="2"
-              />
-              <line
-                x1="0"
-                y1="45"
-                x2="100"
-                y2="45"
-                stroke="#e0e0e0"
-                stroke-width="0.5"
-                stroke-dasharray="2"
-              />
+      <!-- Tabs untuk Pemasukan & Pengeluaran -->
+      <q-tabs
+        v-model="activeTab"
+        dense
+        class="text-grey-7 q-mb-md"
+        active-color="primary"
+        indicator-color="primary"
+        align="justify"
+        narrow-indicator
+      >
+        <q-tab name="pemasukan" icon="trending_up" label="Pemasukan" />
+        <q-tab name="pengeluaran" icon="trending_down" label="Pengeluaran" />
+        <q-tab name="semua" icon="list" label="Semua Transaksi" />
+      </q-tabs>
 
-              <!-- Area fill -->
-              <polygon :points="areaPoints" fill="rgba(0, 104, 55, 0.15)" />
-
-              <!-- Line -->
-              <polyline
-                :points="chartPoints"
-                fill="none"
-                stroke="#006837"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-
-              <!-- Data points -->
-              <circle
-                v-for="(p, idx) in pointList"
-                :key="idx"
-                :cx="p.x"
-                :cy="p.y"
-                r="2.5"
-                fill="#006837"
-                stroke="white"
-                stroke-width="1"
-                class="data-point"
-                @mouseenter="showTooltipAt(idx)"
-              />
-
-              <!-- Date labels -->
-              <g v-for="(p, idx) in pointList" :key="'label-' + idx">
-                <text :x="p.x" y="58" font-size="4" text-anchor="middle" fill="#666">
-                  {{ formatChartDate(p.date) }}
-                </text>
-              </g>
-            </svg>
-
-            <!-- Tooltip -->
-            <div
-              v-if="tooltipVisible"
-              class="chart-tooltip"
-              :style="{
-                left: tooltipPosition.x + 'px',
-                top: tooltipPosition.y + 'px',
-              }"
+      <q-tab-panels v-model="activeTab" animated>
+        <!-- Pemasukan Panel -->
+        <q-tab-panel name="pemasukan">
+          <q-card class="data-card">
+            <q-table
+              :rows="filteredPemasukan"
+              :columns="columnsPemasukan"
+              row-key="id"
+              flat
+              bordered
+              :pagination="{ rowsPerPage: 10 }"
+              :loading="loading"
             >
-              <div class="tooltip-date">{{ formatTooltipDate(tooltipData.date) }}</div>
-              <div class="tooltip-amount text-weight-bold">
-                Rp {{ formatCurrency(tooltipData.value) }}
-              </div>
-            </div>
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
+              <!-- Tanggal Column -->
+              <template v-slot:body-cell-tanggal="props">
+                <q-td :props="props">
+                  <div class="column">
+                    <div class="text-weight-medium">
+                      {{ formatDate(props.row.tanggal) }}
+                    </div>
+                    <div class="text-caption text-grey-7">
+                      {{ getDayName(props.row.tanggal) }}
+                    </div>
+                  </div>
+                </q-td>
+              </template>
 
-    <!-- DAILY DETAIL SECTION -->
-    <div class="row items-center justify-between q-mb-md">
-      <div class="col-8">
-        <div class="text-subtitle1 text-weight-bold text-primary">Detail Transaksi Harian</div>
-        <div class="text-caption text-grey-7">Transaksi pada tanggal terpilih</div>
-      </div>
-      <div class="col-4 text-right">
-        <q-btn
-          flat
-          color="primary"
-          icon="event"
-          @click="showDatePicker = true"
-          label="Pilih Tanggal"
-          size="sm"
-        />
+              <!-- Jumlah Column -->
+              <template v-slot:body-cell-jumlah="props">
+                <q-td :props="props">
+                  <div class="text-weight-bold text-green">
+                    {{ formatCurrency(props.row.jumlah) }}
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Kategori Column -->
+              <template v-slot:body-cell-kategori="props">
+                <q-td :props="props">
+                  <q-badge :color="getCategoryColor(props.row.kategori)">
+                    {{ props.row.kategori || '-' }}
+                  </q-badge>
+                </q-td>
+              </template>
+
+              <!-- Actions Column -->
+              <template v-slot:body-cell-actions="props">
+                <q-td :props="props">
+                  <div class="row q-gutter-xs">
+                    <q-btn
+                      icon="edit"
+                      size="sm"
+                      color="blue"
+                      flat
+                      dense
+                      @click="editPemasukan(props.row)"
+                    />
+                    <q-btn
+                      icon="delete"
+                      size="sm"
+                      color="red"
+                      flat
+                      dense
+                      @click="deletePemasukan(props.row.id, props.row.keterangan)"
+                    />
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Empty State -->
+              <template v-slot:no-data>
+                <div class="full-width row flex-center text-grey q-pa-xl">
+                  <q-icon name="payments" size="3em" color="grey-4" class="q-mb-sm" />
+                  <div class="text-center">
+                    <div class="text-subtitle1 text-grey-7 q-mb-xs">Belum ada data pemasukan</div>
+                    <div class="text-caption text-grey-6">
+                      Mulai dengan menambahkan pemasukan baru
+                    </div>
+                    <q-btn
+                      label="Tambah Pemasukan"
+                      color="positive"
+                      outline
+                      class="q-mt-md"
+                      @click="showAddPemasukan"
+                    />
+                  </div>
+                </div>
+              </template>
+            </q-table>
+          </q-card>
+        </q-tab-panel>
+
+        <!-- Pengeluaran Panel -->
+        <q-tab-panel name="pengeluaran">
+          <q-card class="data-card">
+            <q-table
+              :rows="filteredPengeluaran"
+              :columns="columnsPengeluaran"
+              row-key="id"
+              flat
+              bordered
+              :pagination="{ rowsPerPage: 10 }"
+              :loading="loading"
+            >
+              <!-- Tanggal Column -->
+              <template v-slot:body-cell-tanggal="props">
+                <q-td :props="props">
+                  <div class="column">
+                    <div class="text-weight-medium">
+                      {{ formatDate(props.row.tanggal) }}
+                    </div>
+                    <div class="text-caption text-grey-7">
+                      {{ getDayName(props.row.tanggal) }}
+                    </div>
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Jumlah Column -->
+              <template v-slot:body-cell-jumlah="props">
+                <q-td :props="props">
+                  <div class="text-weight-bold text-red">
+                    {{ formatCurrency(props.row.jumlah) }}
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Kategori Column -->
+              <template v-slot:body-cell-kategori="props">
+                <q-td :props="props">
+                  <q-badge :color="getCategoryColor(props.row.kategori)">
+                    {{ props.row.kategori || '-' }}
+                  </q-badge>
+                </q-td>
+              </template>
+
+              <!-- Actions Column -->
+              <template v-slot:body-cell-actions="props">
+                <q-td :props="props">
+                  <div class="row q-gutter-xs">
+                    <q-btn
+                      icon="edit"
+                      size="sm"
+                      color="blue"
+                      flat
+                      dense
+                      @click="editPengeluaran(props.row)"
+                    />
+                    <q-btn
+                      icon="delete"
+                      size="sm"
+                      color="red"
+                      flat
+                      dense
+                      @click="deletePengeluaran(props.row.id, props.row.keterangan)"
+                    />
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Empty State -->
+              <template v-slot:no-data>
+                <div class="full-width row flex-center text-grey q-pa-xl">
+                  <q-icon name="money_off" size="3em" color="grey-4" class="q-mb-sm" />
+                  <div class="text-center">
+                    <div class="text-subtitle1 text-grey-7 q-mb-xs">Belum ada data pengeluaran</div>
+                    <div class="text-caption text-grey-6">
+                      Mulai dengan menambahkan pengeluaran baru
+                    </div>
+                    <q-btn
+                      label="Tambah Pengeluaran"
+                      color="negative"
+                      outline
+                      class="q-mt-md"
+                      @click="showAddPengeluaran"
+                    />
+                  </div>
+                </div>
+              </template>
+            </q-table>
+          </q-card>
+        </q-tab-panel>
+
+        <!-- Semua Transaksi Panel -->
+        <q-tab-panel name="semua">
+          <q-card class="data-card">
+            <q-table
+              :rows="allTransactions"
+              :columns="columnsAll"
+              row-key="id"
+              flat
+              bordered
+              :pagination="{ rowsPerPage: 15 }"
+              :loading="loading"
+            >
+              <!-- Tipe Column -->
+              <template v-slot:body-cell-tipe="props">
+                <q-td :props="props">
+                  <q-badge :color="props.row.tipe === 'pemasukan' ? 'green' : 'red'">
+                    {{ props.row.tipe === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran' }}
+                  </q-badge>
+                </q-td>
+              </template>
+
+              <!-- Jumlah Column -->
+              <template v-slot:body-cell-jumlah="props">
+                <q-td :props="props">
+                  <div
+                    :class="
+                      props.row.tipe === 'pemasukan'
+                        ? 'text-weight-bold text-green'
+                        : 'text-weight-bold text-red'
+                    "
+                  >
+                    {{ props.row.tipe === 'pemasukan' ? '+' : '-' }}
+                    {{ formatCurrency(props.row.jumlah) }}
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Empty State -->
+              <template v-slot:no-data>
+                <div class="full-width row flex-center text-grey q-pa-xl">
+                  <q-icon name="account_balance_wallet" size="3em" color="grey-4" class="q-mb-sm" />
+                  <div class="text-center">
+                    <div class="text-subtitle1 text-grey-7 q-mb-xs">Belum ada transaksi</div>
+                    <div class="text-caption text-grey-6">
+                      Mulai dengan menambahkan transaksi baru
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </q-table>
+          </q-card>
+        </q-tab-panel>
+      </q-tab-panels>
+
+      <!-- Chart Section -->
+      <div class="row q-col-gutter-md q-mt-lg">
+        <div class="col-12 col-md-6">
+          <q-card class="chart-card">
+            <q-card-section>
+              <div class="text-subtitle1 text-weight-bold">Pemasukan vs Pengeluaran</div>
+              <div class="text-caption text-grey-7">Perbandingan bulan ini</div>
+            </q-card-section>
+            <q-card-section>
+              <!-- Placeholder untuk chart -->
+              <div class="chart-placeholder">
+                <div class="text-center q-py-xl">
+                  <q-icon name="bar_chart" size="3em" color="grey-4" />
+                  <div class="text-caption text-grey-6 q-mt-sm">Chart akan ditampilkan di sini</div>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-12 col-md-6">
+          <q-card class="chart-card">
+            <q-card-section>
+              <div class="text-subtitle1 text-weight-bold">Kategori Pengeluaran</div>
+              <div class="text-caption text-grey-7">Distribusi pengeluaran bulan ini</div>
+            </q-card-section>
+            <q-card-section>
+              <!-- Placeholder untuk pie chart -->
+              <div class="chart-placeholder">
+                <div class="text-center q-py-xl">
+                  <q-icon name="pie_chart" size="3em" color="grey-4" />
+                  <div class="text-caption text-grey-6 q-mt-sm">Chart akan ditampilkan di sini</div>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
     </div>
 
-    <!-- DATE PICKER -->
-    <q-dialog v-model="showDatePicker">
-      <q-card style="width: 300px">
+    <!-- Dialog Form Pemasukan -->
+    <q-dialog v-model="showPemasukanDialog" persistent>
+      <q-card style="min-width: 400px">
         <q-card-section>
-          <div class="text-h6">Pilih Tanggal</div>
+          <div class="text-h6">{{ isEditPemasukan ? 'Edit Pemasukan' : 'Tambah Pemasukan' }}</div>
         </q-card-section>
-        <q-date v-model="selectedDateModel" mask="DD MMM YYYY" minimal />
-        <q-card-actions align="right">
-          <q-btn flat label="Tutup" color="primary" v-close-popup />
-        </q-card-actions>
+
+        <q-card-section class="q-pt-none">
+          <q-form @submit="savePemasukan" class="q-gutter-md">
+            <q-input
+              v-model="pemasukanForm.tanggal"
+              label="Tanggal"
+              outlined
+              type="date"
+              :rules="[(val) => !!val || 'Tanggal wajib diisi']"
+            />
+
+            <q-input
+              v-model="pemasukanForm.jumlah"
+              label="Jumlah"
+              outlined
+              type="number"
+              prefix="Rp"
+              :rules="[(val) => val > 0 || 'Jumlah harus lebih dari 0']"
+            />
+
+            <q-select
+              v-model="pemasukanForm.kategori"
+              label="Kategori"
+              outlined
+              :options="kategoriPemasukan"
+              :rules="[(val) => !!val || 'Kategori wajib dipilih']"
+            />
+
+            <q-input
+              v-model="pemasukanForm.keterangan"
+              label="Keterangan"
+              outlined
+              type="textarea"
+              rows="2"
+              :rules="[(val) => !!val || 'Keterangan wajib diisi']"
+            />
+
+            <div class="row justify-end q-gutter-sm q-mt-md">
+              <q-btn label="Batal" color="grey" flat v-close-popup />
+              <q-btn
+                :label="isEditPemasukan ? 'Update' : 'Simpan'"
+                color="positive"
+                type="submit"
+                :loading="saving"
+              />
+            </div>
+          </q-form>
+        </q-card-section>
       </q-card>
     </q-dialog>
 
-    <!-- DAILY SUMMARY -->
-    <div class="row q-col-gutter-sm q-mb-md">
-      <div class="col-12 col-md-4">
-        <q-card flat class="daily-card bg-blue-1">
-          <q-card-section class="text-center">
-            <q-icon name="today" color="blue-8" size="sm" class="q-mb-xs" />
-            <div class="text-subtitle2 text-blue-8">{{ formattedDate }}</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-6 col-md-4">
-        <q-card flat class="daily-card bg-green-1">
-          <q-card-section class="text-center">
-            <div class="text-h6 text-weight-bold text-green-8">
-              Rp {{ formatCurrency(dailySummary.income) }}
-            </div>
-            <div class="text-caption text-grey-7">Pemasukan</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-6 col-md-4">
-        <q-card flat class="daily-card bg-red-1">
-          <q-card-section class="text-center">
-            <div class="text-h6 text-weight-bold text-red-8">
-              Rp {{ formatCurrency(dailySummary.expense) }}
-            </div>
-            <div class="text-caption text-grey-7">Pengeluaran</div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- TRANSACTION LIST -->
-    <q-card class="transaction-list-card">
-      <q-card-section>
-        <div class="text-weight-bold text-grey-9 q-mb-md">
-          Daftar Transaksi ({{ filteredTransactions.length }})
-        </div>
-
-        <div v-if="loading" class="text-center q-py-lg">
-          <q-spinner color="primary" size="2em" />
-          <div class="text-grey-7 q-mt-sm">Memuat transaksi...</div>
-        </div>
-
-        <div v-else-if="filteredTransactions.length === 0" class="text-center q-py-xl">
-          <q-icon name="receipt" size="50px" color="grey-4" />
-          <div class="text-h6 text-grey-5 q-mt-md">Tidak ada transaksi</div>
-          <div class="text-caption text-grey-6">
-            Tidak ada transaksi tercatat pada tanggal {{ formattedDate }}
+    <!-- Dialog Form Pengeluaran -->
+    <q-dialog v-model="showPengeluaranDialog" persistent>
+      <q-card style="min-width: 400px">
+        <q-card-section>
+          <div class="text-h6">
+            {{ isEditPengeluaran ? 'Edit Pengeluaran' : 'Tambah Pengeluaran' }}
           </div>
-        </div>
+        </q-card-section>
 
-        <q-list separator v-else>
-          <q-item
-            v-for="item in filteredTransactions"
-            :key="item.id"
-            class="transaction-item q-py-md"
-            clickable
-            v-ripple
-          >
-            <q-item-section avatar>
-              <q-avatar
-                :icon="item.type === 'Pemasukan' ? 'arrow_downward' : 'arrow_upward'"
-                :color="item.type === 'Pemasukan' ? 'green-1' : 'red-1'"
-                :text-color="item.type === 'Pemasukan' ? 'green-8' : 'red-8'"
-                size="md"
+        <q-card-section class="q-pt-none">
+          <q-form @submit="savePengeluaran" class="q-gutter-md">
+            <q-input
+              v-model="pengeluaranForm.tanggal"
+              label="Tanggal"
+              outlined
+              type="date"
+              :rules="[(val) => !!val || 'Tanggal wajib diisi']"
+            />
+
+            <q-input
+              v-model="pengeluaranForm.jumlah"
+              label="Jumlah"
+              outlined
+              type="number"
+              prefix="Rp"
+              :rules="[(val) => val > 0 || 'Jumlah harus lebih dari 0']"
+            />
+
+            <q-select
+              v-model="pengeluaranForm.kategori"
+              label="Kategori"
+              outlined
+              :options="kategoriPengeluaran"
+              :rules="[(val) => !!val || 'Kategori wajib dipilih']"
+            />
+
+            <q-input
+              v-model="pengeluaranForm.keterangan"
+              label="Keterangan"
+              outlined
+              type="textarea"
+              rows="2"
+              :rules="[(val) => !!val || 'Keterangan wajib diisi']"
+            />
+
+            <div class="row justify-end q-gutter-sm q-mt-md">
+              <q-btn label="Batal" color="grey" flat v-close-popup />
+              <q-btn
+                :label="isEditPengeluaran ? 'Update' : 'Simpan'"
+                color="negative"
+                type="submit"
+                :loading="saving"
               />
-            </q-item-section>
-
-            <q-item-section>
-              <q-item-label class="text-weight-medium text-dark">{{ item.desc }}</q-item-label>
-              <q-item-label caption class="text-grey-7">
-                <q-icon name="person" size="12px" class="q-mr-xs" />
-                {{ item.source }}
-                <span v-if="item.time" class="q-ml-sm">
-                  <q-icon name="schedule" size="12px" class="q-mr-xs" />
-                  {{ item.time }}
-                </span>
-              </q-item-label>
-            </q-item-section>
-
-            <q-item-section side>
-              <div class="text-right">
-                <div
-                  :class="item.type === 'Pemasukan' ? 'text-green-8' : 'text-red-8'"
-                  class="text-weight-bold"
-                >
-                  {{ item.type === 'Pemasukan' ? '+' : '-' }} Rp {{ formatCurrency(item.amount) }}
-                </div>
-                <q-chip
-                  :color="getStatusColor(item.status)"
-                  text-color="white"
-                  dense
-                  size="xs"
-                  class="q-mt-xs"
-                >
-                  {{ item.status }}
-                </q-chip>
-              </div>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-card-section>
-    </q-card>
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { date } from 'quasar'
+import { ref, computed, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
 import axios from 'axios'
 
-// Reactive state
-const loading = ref(false)
-const selectedDateModel = ref(date.formatDate(Date.now(), 'DD MMM YYYY'))
-const showDatePicker = ref(false)
+const $q = useQuasar()
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
+
+// States
+const loading = ref(true)
+const saving = ref(false)
+const activeTab = ref('pemasukan')
+const showPemasukanDialog = ref(false)
+const showPengeluaranDialog = ref(false)
+const isEditPemasukan = ref(false)
+const isEditPengeluaran = ref(false)
+
+// Data
 const pemasukanList = ref([])
 const pengeluaranList = ref([])
 
-// Date range
-const range = ref({
-  start: date.formatDate(Date.now() - 6 * 24 * 60 * 60 * 1000, 'YYYY-MM-DD'),
-  end: date.formatDate(Date.now(), 'YYYY-MM-DD'),
+// Filter
+const filter = ref({
+  bulan: '',
+  tahun: new Date().getFullYear(),
+  tipe: '',
+  search: '',
 })
 
-// Chart settings
-const chartWidth = ref(300)
-const chartHeight = ref(180)
-
-// Tooltip
-const tooltipVisible = ref(false)
-const tooltipData = ref({ value: 0, date: '' })
-const tooltipPosition = ref({ x: 0, y: 0 })
-
-// Format helpers
-const formatCurrency = (value) => {
-  return Number(value).toLocaleString('id-ID')
-}
-
-const formatDateDisplay = (dateStr) => {
-  return date.formatDate(dateStr, 'DD MMM YYYY')
-}
-
-const formatChartDate = (dateStr) => {
-  return date.formatDate(dateStr, 'DD/MM')
-}
-
-const formatTooltipDate = (dateStr) => {
-  return date.formatDate(dateStr, 'DD MMM YYYY')
-}
-
-// Date range validation
-const isDateRangeValid = computed(() => {
-  if (!range.value.start || !range.value.end) return false
-  return range.value.start <= range.value.end
+// Forms
+const pemasukanForm = ref({
+  id: null,
+  tanggal: new Date().toISOString().split('T')[0],
+  jumlah: '',
+  kategori: '',
+  keterangan: '',
 })
 
-// Apply date range
-const applyDateRange = () => {
-  if (isDateRangeValid.value) {
-    // Force recomputation by triggering a watch
-    fetchData()
+const pengeluaranForm = ref({
+  id: null,
+  tanggal: new Date().toISOString().split('T')[0],
+  jumlah: '',
+  kategori: '',
+  keterangan: '',
+})
+
+// Options
+const bulanOptions = [
+  { label: 'Januari', value: 1 },
+  { label: 'Februari', value: 2 },
+  { label: 'Maret', value: 3 },
+  { label: 'April', value: 4 },
+  { label: 'Mei', value: 5 },
+  { label: 'Juni', value: 6 },
+  { label: 'Juli', value: 7 },
+  { label: 'Agustus', value: 8 },
+  { label: 'September', value: 9 },
+  { label: 'Oktober', value: 10 },
+  { label: 'November', value: 11 },
+  { label: 'Desember', value: 12 },
+]
+
+const tipeOptions = [
+  { label: 'Pemasukan', value: 'pemasukan' },
+  { label: 'Pengeluaran', value: 'pengeluaran' },
+]
+
+const kategoriPemasukan = ['Iuran Warga', 'Denda', 'Bantuan', 'Lain-lain']
+
+const kategoriPengeluaran = [
+  'Gaji Petugas',
+  'Operasional',
+  'Perawatan Alat',
+  'Transportasi',
+  'Listrik/Air',
+  'Lain-lain',
+]
+
+// Columns
+const columnsPemasukan = [
+  { name: 'tanggal', label: 'Tanggal', field: 'tanggal', align: 'left', sortable: true },
+  { name: 'kategori', label: 'Kategori', field: 'kategori', align: 'left', sortable: true },
+  { name: 'keterangan', label: 'Keterangan', field: 'keterangan', align: 'left', sortable: true },
+  { name: 'jumlah', label: 'Jumlah', field: 'jumlah', align: 'right', sortable: true },
+  { name: 'actions', label: 'Aksi', align: 'center' },
+]
+
+const columnsPengeluaran = [
+  { name: 'tanggal', label: 'Tanggal', field: 'tanggal', align: 'left', sortable: true },
+  { name: 'kategori', label: 'Kategori', field: 'kategori', align: 'left', sortable: true },
+  { name: 'keterangan', label: 'Keterangan', field: 'keterangan', align: 'left', sortable: true },
+  { name: 'jumlah', label: 'Jumlah', field: 'jumlah', align: 'right', sortable: true },
+  { name: 'actions', label: 'Aksi', align: 'center' },
+]
+
+const columnsAll = [
+  { name: 'tanggal', label: 'Tanggal', field: 'tanggal', align: 'left', sortable: true },
+  { name: 'tipe', label: 'Tipe', field: 'tipe', align: 'center', sortable: true },
+  { name: 'kategori', label: 'Kategori', field: 'kategori', align: 'left', sortable: true },
+  { name: 'keterangan', label: 'Keterangan', field: 'keterangan', align: 'left', sortable: true },
+  { name: 'jumlah', label: 'Jumlah', field: 'jumlah', align: 'right', sortable: true },
+]
+
+// Computed Properties
+const filteredPemasukan = computed(() => {
+  let filtered = pemasukanList.value
+
+  if (filter.value.bulan) {
+    filtered = filtered.filter((item) => {
+      const date = new Date(item.tanggal)
+      return date.getMonth() + 1 === parseInt(filter.value.bulan)
+    })
+  }
+
+  if (filter.value.tahun) {
+    filtered = filtered.filter((item) => {
+      const date = new Date(item.tanggal)
+      return date.getFullYear() === parseInt(filter.value.tahun)
+    })
+  }
+
+  if (filter.value.search) {
+    const search = filter.value.search.toLowerCase()
+    filtered = filtered.filter(
+      (item) =>
+        item.keterangan?.toLowerCase().includes(search) ||
+        item.kategori?.toLowerCase().includes(search),
+    )
+  }
+
+  return filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+})
+
+const filteredPengeluaran = computed(() => {
+  let filtered = pengeluaranList.value
+
+  if (filter.value.bulan) {
+    filtered = filtered.filter((item) => {
+      const date = new Date(item.tanggal)
+      return date.getMonth() + 1 === parseInt(filter.value.bulan)
+    })
+  }
+
+  if (filter.value.tahun) {
+    filtered = filtered.filter((item) => {
+      const date = new Date(item.tanggal)
+      return date.getFullYear() === parseInt(filter.value.tahun)
+    })
+  }
+
+  if (filter.value.search) {
+    const search = filter.value.search.toLowerCase()
+    filtered = filtered.filter(
+      (item) =>
+        item.keterangan?.toLowerCase().includes(search) ||
+        item.kategori?.toLowerCase().includes(search),
+    )
+  }
+
+  return filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+})
+
+const allTransactions = computed(() => {
+  const pemasukan = filteredPemasukan.value.map((item) => ({
+    ...item,
+    tipe: 'pemasukan',
+  }))
+
+  const pengeluaran = filteredPengeluaran.value.map((item) => ({
+    ...item,
+    tipe: 'pengeluaran',
+  }))
+
+  return [...pemasukan, ...pengeluaran].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+})
+
+const totalPemasukan = computed(() => {
+  return filteredPemasukan.value.reduce((sum, item) => sum + (parseFloat(item.jumlah) || 0), 0)
+})
+
+const totalPengeluaran = computed(() => {
+  return filteredPengeluaran.value.reduce((sum, item) => sum + (parseFloat(item.jumlah) || 0), 0)
+})
+
+const saldo = computed(() => totalPemasukan.value - totalPengeluaran.value)
+
+const rataPengeluaran = computed(() => {
+  const count = filteredPengeluaran.value.length
+  return count > 0 ? totalPengeluaran.value / count : 0
+})
+
+// Helper Functions
+// Helper Functions
+// Helper Functions - versi lebih robust
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+
+  try {
+    // Split tanggal dari backend "2025-12-28"
+    const [year, month, day] = dateString.split('-').map(Number)
+
+    // Buat Date object dengan waktu set ke tengah hari untuk hindari timezone issues
+    const date = new Date(year, month - 1, day, 12, 0, 0)
+
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  } catch (error) {
+    console.error('Error formatting date:', dateString, error)
+    // Jika gagal, coba format manual
+    if (dateString.includes('-')) {
+      const parts = dateString.split('-')
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`
+      }
+    }
+    return dateString
   }
 }
 
-// Fetch data
-const fetchData = async () => {
+const getDayName = (dateString) => {
+  if (!dateString) return ''
+
+  try {
+    // Split tanggal dari backend "2025-12-28"
+    const [year, month, day] = dateString.split('-').map(Number)
+
+    // Buat Date object
+    const date = new Date(year, month - 1, day)
+
+    return date.toLocaleDateString('id-ID', { weekday: 'long' })
+  } catch (error) {
+    console.error('Error getting day name:', dateString, error)
+    return ''
+  }
+}
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(amount)
+}
+
+const getCategoryColor = (category) => {
+  const colors = {
+    'Iuran Warga': 'blue',
+    Denda: 'orange',
+    Bantuan: 'green',
+    'Gaji Petugas': 'purple',
+    Operasional: 'teal',
+    'Perawatan Alat': 'cyan',
+    Transportasi: 'amber',
+    'Listrik/Air': 'light-blue',
+    'Lain-lain': 'grey',
+  }
+  return colors[category] || 'grey'
+}
+
+// Methods
+const loadData = async () => {
   loading.value = true
   try {
-    await Promise.all([fetchPemasukan(), fetchPengeluaran()])
+    const token = localStorage.getItem('token')
+
+    // Load pemasukan
+    const pemasukanRes = await axios.get(`${API_URL}/api/pemasukan`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    console.log('Raw pemasukan data:', pemasukanRes.data.data)
+
+    if (pemasukanRes.data.success) {
+      // Normalize tanggal
+      pemasukanList.value = pemasukanRes.data.data.map((item) => ({
+        ...item,
+        tanggal: normalizeDate(item.tanggal),
+      }))
+      console.log('Normalized pemasukan:', pemasukanList.value)
+    }
+
+    // Load pengeluaran
+    const pengeluaranRes = await axios.get(`${API_URL}/api/pengeluaran`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    console.log('Raw pengeluaran data:', pengeluaranRes.data.data)
+
+    if (pengeluaranRes.data.success) {
+      // Normalize tanggal
+      pengeluaranList.value = pengeluaranRes.data.data.map((item) => ({
+        ...item,
+        tanggal: normalizeDate(item.tanggal),
+      }))
+      console.log('Normalized pengeluaran:', pengeluaranList.value)
+    }
   } catch (error) {
-    console.error('Error fetching data:', error)
+    console.error('Error loading data:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Gagal memuat data keuangan',
+      position: 'top',
+    })
   } finally {
     loading.value = false
   }
 }
 
-const fetchPemasukan = async () => {
+// Fungsi untuk normalize tanggal
+const normalizeDate = (dateString) => {
+  if (!dateString) return ''
+
+  // Jika mengandung %, ganti dengan angka
+  if (dateString.includes('%')) {
+    // Contoh: "%Y-%m-%d" -> "2025-12-28"
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+
+    // Replace placeholder
+    let result = dateString
+    result = result.replace(/%Y/g, year.toString())
+    result = result.replace(/%m/g, month)
+    result = result.replace(/%d/g, day)
+    result = result.replace(/%/g, '') // Hapus % yang tersisa
+
+    return result
+  }
+
+  return dateString
+}
+
+// Helper functions yang lebih sederhana sekarang
+
+const showAddPemasukan = () => {
+  pemasukanForm.value = {
+    id: null,
+    tanggal: new Date().toISOString().split('T')[0],
+    jumlah: '',
+    kategori: '',
+    keterangan: '',
+  }
+  isEditPemasukan.value = false
+  showPemasukanDialog.value = true
+}
+
+const showAddPengeluaran = () => {
+  pengeluaranForm.value = {
+    id: null,
+    tanggal: new Date().toISOString().split('T')[0],
+    jumlah: '',
+    kategori: '',
+    keterangan: '',
+  }
+  isEditPengeluaran.value = false
+  showPengeluaranDialog.value = true
+}
+
+const editPemasukan = (item) => {
+  pemasukanForm.value = { ...item }
+  isEditPemasukan.value = true
+  showPemasukanDialog.value = true
+}
+
+const editPengeluaran = (item) => {
+  pengeluaranForm.value = { ...item }
+  isEditPengeluaran.value = true
+  showPengeluaranDialog.value = true
+}
+
+const savePemasukan = async () => {
+  saving.value = true
   try {
-    const res = await axios.get('http://localhost:5000/api/pemasukan')
-    pemasukanList.value = res.data.data.map((x) => ({
-      id: x.id,
-      date: x.tanggal,
-      type: 'Pemasukan',
-      amount: Number(x.jumlah_pembayaran) || 0,
-      desc: `Pembayaran dari ${x.nama_warga || 'Warga'}`,
-      source: x.nama_warga || 'Warga',
-      status: Number(x.kekurangan) > 0 ? 'Belum Lunas' : 'Lunas',
-      time: x.tanggal ? date.formatDate(x.tanggal, 'HH:mm') : '',
-    }))
+    const token = localStorage.getItem('token')
+    const method = isEditPemasukan.value ? 'PUT' : 'POST'
+    const url = isEditPemasukan.value
+      ? `${API_URL}/api/pemasukan/${pemasukanForm.value.id}`
+      : `${API_URL}/api/pemasukan`
+
+    const response = await axios({
+      method,
+      url,
+      data: pemasukanForm.value,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (response.data.success) {
+      $q.notify({
+        type: 'positive',
+        message: isEditPemasukan.value
+          ? 'Pemasukan berhasil diperbarui'
+          : 'Pemasukan berhasil ditambahkan',
+        position: 'top',
+      })
+
+      showPemasukanDialog.value = false
+      await loadData()
+    }
   } catch (error) {
-    console.error('Error fetching pemasukan:', error)
+    console.error('Error saving pemasukan:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Gagal menyimpan pemasukan',
+      position: 'top',
+    })
+  } finally {
+    saving.value = false
   }
 }
 
-const fetchPengeluaran = async () => {
+const savePengeluaran = async () => {
+  saving.value = true
   try {
-    const res = await axios.get('http://localhost:5000/api/pengeluaran')
-    pengeluaranList.value = res.data.data.map((x) => ({
-      id: x.id,
-      date: x.tanggal,
-      type: 'Pengeluaran',
-      amount: Number(x.jumlah_pengeluaran) || 0,
-      desc: `${x.jenis_pengeluaran || 'Pengeluaran'}: ${x.nama_pengeluaran || ''}`,
-      source: 'Admin',
-      status: 'Selesai',
-      time: x.tanggal ? date.formatDate(x.tanggal, 'HH:mm') : '',
-    }))
+    const token = localStorage.getItem('token')
+    const method = isEditPengeluaran.value ? 'PUT' : 'POST'
+    const url = isEditPengeluaran.value
+      ? `${API_URL}/api/pengeluaran/${pengeluaranForm.value.id}`
+      : `${API_URL}/api/pengeluaran`
+
+    const response = await axios({
+      method,
+      url,
+      data: pengeluaranForm.value,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (response.data.success) {
+      $q.notify({
+        type: 'positive',
+        message: isEditPengeluaran.value
+          ? 'Pengeluaran berhasil diperbarui'
+          : 'Pengeluaran berhasil ditambahkan',
+        position: 'top',
+      })
+
+      showPengeluaranDialog.value = false
+      await loadData()
+    }
   } catch (error) {
-    console.error('Error fetching pengeluaran:', error)
+    console.error('Error saving pengeluaran:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Gagal menyimpan pengeluaran',
+      position: 'top',
+    })
+  } finally {
+    saving.value = false
   }
 }
 
-// Computed properties
-const formattedDate = computed(() => selectedDateModel.value)
-
-const filteredTransactions = computed(() => {
-  const selected = date.formatDate(selectedDateModel.value, 'YYYY-MM-DD')
-
-  const allTransactions = [...pemasukanList.value, ...pengeluaranList.value]
-
-  return allTransactions
-    .filter((item) => {
-      if (!item.date) return false
-      const itemDate = date.formatDate(item.date, 'YYYY-MM-DD')
-      return itemDate === selected
-    })
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-})
-
-const totalKeseluruhan = computed(() => {
-  const income = pemasukanList.value
-    .filter((item) => {
-      if (!range.value.start || !range.value.end) return true
-      const itemDate = date.formatDate(item.date, 'YYYY-MM-DD')
-      return itemDate >= range.value.start && itemDate <= range.value.end
-    })
-    .reduce((sum, item) => sum + item.amount, 0)
-
-  const expense = pengeluaranList.value
-    .filter((item) => {
-      if (!range.value.start || !range.value.end) return true
-      const itemDate = date.formatDate(item.date, 'YYYY-MM-DD')
-      return itemDate >= range.value.start && itemDate <= range.value.end
-    })
-    .reduce((sum, item) => sum + item.amount, 0)
-
-  return {
-    income,
-    expense,
-    saldo: income - expense,
-  }
-})
-
-const dailySummary = computed(() => {
-  const selected = date.formatDate(selectedDateModel.value, 'YYYY-MM-DD')
-
-  const income = pemasukanList.value
-    .filter((item) => {
-      if (!item.date) return false
-      const itemDate = date.formatDate(item.date, 'YYYY-MM-DD')
-      return itemDate === selected
-    })
-    .reduce((sum, item) => sum + item.amount, 0)
-
-  const expense = pengeluaranList.value
-    .filter((item) => {
-      if (!item.date) return false
-      const itemDate = date.formatDate(item.date, 'YYYY-MM-DD')
-      return itemDate === selected
-    })
-    .reduce((sum, item) => sum + item.amount, 0)
-
-  return {
-    income,
-    expense,
-    saldo: income - expense,
-  }
-})
-
-const weeklyTrend = computed(() => {
-  const list = []
-
-  if (!range.value.start || !range.value.end) return list
-
-  const startDate = new Date(range.value.start)
-  const endDate = new Date(range.value.end)
-
-  let currentDate = new Date(startDate)
-
-  while (currentDate <= endDate) {
-    const dateStr = date.formatDate(currentDate, 'YYYY-MM-DD')
-
-    const income = pemasukanList.value
-      .filter((item) => {
-        if (!item.date) return false
-        const itemDate = date.formatDate(item.date, 'YYYY-MM-DD')
-        return itemDate === dateStr
+const deletePemasukan = async (id, keterangan) => {
+  $q.dialog({
+    title: 'Konfirmasi Hapus',
+    message: `Yakin ingin menghapus pemasukan <strong>${keterangan || 'ini'}</strong>?`,
+    html: true,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      const token = localStorage.getItem('token')
+      await axios.delete(`${API_URL}/api/pemasukan/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
-      .reduce((sum, item) => sum + item.amount, 0)
 
-    const expense = pengeluaranList.value
-      .filter((item) => {
-        if (!item.date) return false
-        const itemDate = date.formatDate(item.date, 'YYYY-MM-DD')
-        return itemDate === dateStr
+      $q.notify({
+        type: 'positive',
+        message: 'Pemasukan berhasil dihapus',
+        position: 'top',
       })
-      .reduce((sum, item) => sum + item.amount, 0)
 
-    list.push({
-      date: dateStr,
-      value: income - expense,
-      income,
-      expense,
-    })
-
-    currentDate.setDate(currentDate.getDate() + 1)
-  }
-
-  return list
-})
-
-const pointList = computed(() => {
-  if (weeklyTrend.value.length === 0) return []
-
-  const values = weeklyTrend.value.map((x) => x.value)
-  const maxValue = Math.max(...values)
-  const minValue = Math.min(...values)
-  const rangeValue = maxValue - minValue || 1
-
-  const padding = 0.1 * rangeValue
-  const adjustedMax = maxValue + padding
-  const adjustedMin = minValue - padding
-
-  return weeklyTrend.value.map((item, idx) => {
-    const x = weeklyTrend.value.length === 1 ? 50 : (idx / (weeklyTrend.value.length - 1)) * 100
-    const y = 50 - ((item.value - adjustedMin) / (adjustedMax - adjustedMin || 1)) * 45
-
-    return {
-      x,
-      y,
-      value: item.value,
-      date: item.date,
+      await loadData()
+    } catch (error) {
+      console.error('Error deleting pemasukan:', error)
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Gagal menghapus pemasukan',
+        position: 'top',
+      })
     }
   })
-})
-
-const chartPoints = computed(() => pointList.value.map((p) => `${p.x},${p.y}`).join(' '))
-
-const areaPoints = computed(() => {
-  if (pointList.value.length === 0) return ''
-  const start = `0,50`
-  const points = pointList.value.map((p) => `${p.x},${p.y}`).join(' ')
-  const end = `100,50`
-  return `${start} ${points} ${end}`
-})
-
-// Tooltip functions
-const showTooltipAt = (idx) => {
-  const p = pointList.value[idx]
-  tooltipData.value = {
-    value: p.value,
-    date: p.date,
-  }
-
-  tooltipPosition.value = {
-    x: (p.x / 100) * chartWidth.value,
-    y: (p.y / 60) * chartHeight.value - 40,
-  }
-
-  tooltipVisible.value = true
 }
 
-const hideTooltip = () => {
-  tooltipVisible.value = false
-}
+const deletePengeluaran = async (id, keterangan) => {
+  $q.dialog({
+    title: 'Konfirmasi Hapus',
+    message: `Yakin ingin menghapus pengeluaran <strong>${keterangan || 'ini'}</strong>?`,
+    html: true,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      const token = localStorage.getItem('token')
+      await axios.delete(`${API_URL}/api/pengeluaran/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
 
-// Status helper
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'Lunas':
-      return 'green'
-    case 'Selesai':
-      return 'green'
-    case 'Belum Lunas':
-      return 'red'
-    case 'Pending':
-      return 'orange'
-    default:
-      return 'grey'
-  }
-}
+      $q.notify({
+        type: 'positive',
+        message: 'Pengeluaran berhasil dihapus',
+        position: 'top',
+      })
 
-// Watchers
-watch([range], () => {
-  if (isDateRangeValid.value) {
-    // Data akan direcompute otomatis
-  }
-})
+      await loadData()
+    } catch (error) {
+      console.error('Error deleting pengeluaran:', error)
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Gagal menghapus pengeluaran',
+        position: 'top',
+      })
+    }
+  })
+}
 
 // Lifecycle
 onMounted(() => {
-  fetchData()
+  loadData()
 })
 </script>
 
 <style scoped>
-/* Base styles */
-.q-page {
-  background-color: #f8faf9 !important;
-}
-
-.text-primary {
-  color: #006837 !important;
-}
-
-/* Card styles */
-.balance-card {
-  background: linear-gradient(135deg, #006837 0%, #008749 100%);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 104, 55, 0.25);
-}
-
-.stat-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
-}
-
-.daily-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.transaction-list-card {
+.data-card {
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* Chart styles */
-.chart-container {
-  position: relative;
-  width: 100%;
-  height: 200px;
+.stat-card {
+  border-radius: 12px;
+  transition: transform 0.2s;
 }
 
-.chart-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
+.stat-card:hover {
+  transform: translateY(-2px);
 }
 
-.chart-svg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+.chart-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.data-point {
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.data-point:hover {
-  r: 4;
-  fill: #004d2c;
-}
-
-.chart-tooltip {
-  position: absolute;
-  background: rgba(0, 104, 55, 0.95);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translate(-50%, -100%);
-  white-space: nowrap;
-  min-width: 140px;
-}
-
-.chart-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: rgba(0, 104, 55, 0.95);
-}
-
-.tooltip-date {
-  font-size: 11px;
-  opacity: 0.9;
-  margin-bottom: 2px;
-}
-
-.tooltip-amount {
-  font-size: 14px;
-}
-
-/* Transaction item styles */
-.transaction-item {
+.chart-placeholder {
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
   border-radius: 8px;
-  margin-bottom: 4px;
-  transition: all 0.2s ease;
-}
-
-.transaction-item:hover {
-  background-color: #f5f9f7;
-  transform: translateX(2px);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .text-h4 {
-    font-size: 1.75rem;
-  }
-
-  .chart-container {
-    height: 160px;
-  }
-}
-
-.opacity-80 {
-  opacity: 0.8;
-}
-
-.opacity-20 {
-  opacity: 0.2;
-}
-
-.shadow-1 {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
 }
 </style>
