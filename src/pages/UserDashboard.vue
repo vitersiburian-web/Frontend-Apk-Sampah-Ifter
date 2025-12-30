@@ -1,17 +1,20 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-pa-md bg-green-1">
     <!-- Welcome Header -->
     <div class="q-mb-lg">
       <div class="text-h5 text-weight-bold text-dark-green q-mb-xs">
         Selamat datang, {{ username }}
       </div>
-      <div class="text-caption text-grey-7">
-        {{ getGreeting() }} | Terakhir login: {{ formatTime(lastLogin) }}
-      </div>
+      <div class="text-caption text-grey-7">{{ getGreeting() }} | Wilayah: {{ wilayah }}</div>
     </div>
 
     <!-- Pengajuan Status Card -->
-    <q-card v-if="hasPengajuan" flat class="status-card q-mb-lg" :class="{ 'bg-orange-1': true }">
+    <q-card
+      v-if="hasPengajuanAktif"
+      flat
+      class="status-card q-mb-lg"
+      :class="{ 'bg-orange-1': true }"
+    >
       <q-card-section class="q-pa-md">
         <div class="row items-center justify-between">
           <div class="col">
@@ -30,9 +33,9 @@
         </div>
 
         <div class="row items-center q-mt-md">
-          <q-badge color="orange" class="status-badge">
-            <q-icon name="schedule" size="14px" class="q-mr-xs" />
-            Menunggu Konfirmasi
+          <q-badge :color="getStatusColor(pengajuanAktif.status)" class="status-badge">
+            <q-icon :name="getStatusIcon(pengajuanAktif.status)" size="14px" class="q-mr-xs" />
+            {{ getStatusText(pengajuanAktif.status) }}
           </q-badge>
         </div>
 
@@ -40,20 +43,20 @@
           <div class="row items-center q-gutter-sm q-mb-xs">
             <q-icon name="event" color="primary" size="16px" />
             <div class="text-body2 text-dark">
-              {{ formatJadwal(jadwalDiajukan) }}
+              {{ formatJadwal(pengajuanAktif.tanggal_jadwal) }}
             </div>
           </div>
           <div class="row items-center q-gutter-sm">
             <q-icon name="recycling" color="primary" size="16px" />
             <div class="text-body2 text-dark">
-              {{ jenisSampahDiajukan }}
+              {{ pengajuanAktif.jenis_sampah || 'Belum ditentukan' }}
             </div>
           </div>
         </div>
 
         <div class="text-caption text-grey-7 q-mt-sm">
           <q-icon name="info" size="14px" class="q-mr-xs" />
-          Petugas akan menghubungi Anda dalam 1-2 jam
+          {{ getPengajuanMessage(pengajuanAktif.status) }}
         </div>
       </q-card-section>
     </q-card>
@@ -74,11 +77,11 @@
 
         <!-- Content -->
         <div class="q-pa-md">
-          <div v-if="jadwalList.length > 0">
+          <div v-if="jadwalToday.length > 0">
             <div class="row items-center q-mb-sm">
               <q-icon name="today" color="green" size="20px" class="q-mr-sm" />
               <div class="text-h6 text-weight-bold text-dark-green">
-                {{ formatDay(jadwalList[0].tanggal) }}
+                {{ formatDay(jadwalToday[0].tanggal) }}
               </div>
             </div>
 
@@ -88,7 +91,7 @@
                 <div>
                   <div class="text-caption text-grey-7">Lokasi</div>
                   <div class="text-body2 text-weight-medium text-dark">
-                    {{ jadwalList[0].wilayah || 'Area Anda' }}
+                    {{ jadwalToday[0].wilayah || 'Area Anda' }}
                   </div>
                 </div>
               </div>
@@ -98,7 +101,7 @@
                 <div>
                   <div class="text-caption text-grey-7">Petugas</div>
                   <div class="text-body2 text-weight-medium text-dark">
-                    {{ jadwalList[0].nama_petugas || 'Menunggu penugasan' }}
+                    {{ jadwalToday[0].nama_petugas || 'Menunggu penugasan' }}
                   </div>
                 </div>
               </div>
@@ -108,19 +111,55 @@
                 <div>
                   <div class="text-caption text-grey-7">Waktu</div>
                   <div class="text-body2 text-weight-medium text-dark">
-                    {{ getPickupTime(jadwalList[0]) }}
+                    {{ getPickupTime(jadwalToday[0]) }}
                   </div>
                 </div>
               </div>
             </div>
 
             <q-badge
-              :color="getStatusColor(jadwalList[0].status)"
+              :color="getStatusColor(jadwalToday[0].status)"
               class="status-badge-large q-mt-md"
             >
-              <q-icon :name="getStatusIcon(jadwalList[0].status)" size="14px" class="q-mr-xs" />
-              {{ jadwalList[0].status || 'Menunggu penjemputan' }}
+              <q-icon :name="getStatusIcon(jadwalToday[0].status)" size="14px" class="q-mr-xs" />
+              {{ jadwalToday[0].status || 'Menunggu penjemputan' }}
             </q-badge>
+          </div>
+
+          <div v-else-if="jadwalNext" class="text-center q-py-lg">
+            <div class="row items-center q-mb-sm">
+              <q-icon name="schedule" color="blue" size="20px" class="q-mr-sm" />
+              <div class="text-h6 text-weight-bold text-blue">
+                {{ formatDay(jadwalNext.tanggal) }}
+              </div>
+            </div>
+
+            <div class="jadwal-details">
+              <div class="detail-item">
+                <q-icon name="place" color="grey" size="16px" />
+                <div>
+                  <div class="text-caption text-grey-7">Lokasi</div>
+                  <div class="text-body2 text-weight-medium text-dark">
+                    {{ jadwalNext.wilayah || 'Area Anda' }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="detail-item">
+                <q-icon name="access_time" color="grey" size="16px" />
+                <div>
+                  <div class="text-caption text-grey-7">Waktu</div>
+                  <div class="text-body2 text-weight-medium text-dark">
+                    {{ getPickupTime(jadwalNext) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-caption text-grey-7 q-mt-md">
+              <q-icon name="info" size="14px" class="q-mr-xs" />
+              Jadwal pengambilan berikutnya
+            </div>
           </div>
 
           <div v-else class="text-center q-py-lg">
@@ -146,9 +185,56 @@
         @click="handleAjukan"
       />
 
-      <div v-if="!canAjukan" class="text-center q-mt-sm">
+      <div v-if="!canAjukan && jadwalToday.length > 0" class="text-center q-mt-sm">
+        <div class="text-caption text-grey-7">Anda sudah mengajukan pengambilan untuk hari ini</div>
+      </div>
+      <div v-else-if="!canAjukan" class="text-center q-mt-sm">
         <div class="text-caption text-grey-7">
           Pengajuan hanya dapat dilakukan pada hari jadwal pengambilan
+        </div>
+      </div>
+    </div>
+
+    <!-- Jadwal Mendatang (7 Hari) -->
+    <div class="q-mt-lg" v-if="jadwalWeek.length > 1">
+      <div class="row items-center q-mb-md">
+        <q-icon name="schedule" color="green" size="24px" class="q-mr-sm" />
+        <div>
+          <div class="text-h6 text-weight-bold text-dark-green">Jadwal Mendatang</div>
+          <div class="text-caption text-grey-7">7 hari ke depan</div>
+        </div>
+      </div>
+
+      <div class="row q-col-gutter-sm">
+        <div v-for="jadwal in jadwalWeek.slice(1)" :key="jadwal.id" class="col-12">
+          <q-card flat class="jadwal-mendatang-card q-mb-xs">
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center">
+                <div class="col">
+                  <div class="row items-center q-gutter-sm">
+                    <q-badge
+                      :color="isToday(jadwal.tanggal) ? 'primary' : 'grey'"
+                      class="date-badge"
+                    >
+                      {{ formatDateBadge(jadwal.tanggal) }}
+                    </q-badge>
+                    <div class="text-weight-medium">{{ jadwal.wilayah }}</div>
+                  </div>
+                  <div class="text-caption text-grey-7">
+                    {{ jadwal.jam_mulai }} - {{ jadwal.jam_selesai }}
+                  </div>
+                  <div v-if="jadwal.nama_petugas" class="text-caption text-blue">
+                    <q-icon name="person" size="12px" /> {{ jadwal.nama_petugas }}
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <div class="text-caption text-grey-7 text-center">
+                    {{ getDaysUntil(jadwal.tanggal) }}
+                  </div>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
         </div>
       </div>
     </div>
@@ -170,6 +256,24 @@
             <q-icon name="pending_actions" color="orange" size="md" class="q-mb-xs" />
             <div class="text-h6 text-weight-bold text-dark">{{ pendingCount }}</div>
             <div class="text-caption text-grey-7">Menunggu</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-6">
+        <q-card flat class="stat-card">
+          <q-card-section class="text-center">
+            <q-icon name="calendar_month" color="green" size="md" class="q-mb-xs" />
+            <div class="text-h6 text-weight-bold text-dark">{{ jadwalWeek.length }}</div>
+            <div class="text-caption text-grey-7">Jadwal</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-6">
+        <q-card flat class="stat-card">
+          <q-card-section class="text-center">
+            <q-icon name="location_on" color="blue" size="md" class="q-mb-xs" />
+            <div class="text-h6 text-weight-bold text-dark">{{ wilayah }}</div>
+            <div class="text-caption text-grey-7">Wilayah</div>
           </q-card-section>
         </q-card>
       </div>
@@ -217,39 +321,59 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { date } from 'quasar'
 import axios from 'axios'
-import {
-  jadwalPengajuan,
-  jenisSampahPengajuan,
-  statusPengajuan,
-  clearPengajuan,
-} from 'src/stores/laporanStore'
+import { clearPengajuan } from 'src/stores/laporanStore'
 
 const router = useRouter()
+const API_URL = 'http://localhost:5000'
 
 // State
 const showDialog = ref(false)
-const jadwalList = ref([])
 const username = ref('')
-const jadwalToday = ref(null)
+const wilayah = ref('')
 const loadingAction = ref(false)
-const totalRiwayat = ref(0)
 const pendingCount = ref(0)
-const lastLogin = ref(new Date())
 const finishedCount = ref(0)
+const jadwalToday = ref([])
+const jadwalWeek = ref([])
+const pengajuanList = ref([])
+const loading = ref(false)
+
 // Data dari store
-const jadwalDiajukan = jadwalPengajuan
-const jenisSampahDiajukan = jenisSampahPengajuan
-const hasPengajuan = statusPengajuan
 
 // Computed
+const pengajuanAktif = computed(() => {
+  if (pengajuanList.value.length > 0) {
+    return (
+      pengajuanList.value.find((p) => p.status === 'menunggu' || p.status === 'diproses') ||
+      pengajuanList.value[0]
+    )
+  }
+  return null
+})
+
+const hasPengajuanAktif = computed(() => {
+  return (
+    pengajuanAktif.value &&
+    (pengajuanAktif.value.status === 'menunggu' || pengajuanAktif.value.status === 'diproses')
+  )
+})
+
+const jadwalNext = computed(() => {
+  if (jadwalWeek.value.length > 0) {
+    // Cari jadwal pertama yang bukan hari ini
+    for (const jadwal of jadwalWeek.value) {
+      if (!isToday(jadwal.tanggal)) {
+        return jadwal
+      }
+    }
+  }
+  return null
+})
+
 const canAjukan = computed(() => {
-  if (!jadwalToday.value) return false
-  if (hasPengajuan.value) return false
-
-  const today = date.formatDate(new Date(), 'YYYY-MM-DD')
-  const jadwalTanggal = date.formatDate(jadwalToday.value.tanggal, 'YYYY-MM-DD')
-
-  return jadwalTanggal === today
+  if (!jadwalToday.value || jadwalToday.value.length === 0) return false
+  if (hasPengajuanAktif.value) return false
+  return true
 })
 
 // Methods
@@ -259,10 +383,6 @@ const getGreeting = () => {
   if (hour < 15) return 'Selamat siang!'
   if (hour < 18) return 'Selamat sore!'
   return 'Selamat malam!'
-}
-
-const formatTime = (dateTime) => {
-  return date.formatDate(dateTime, 'HH:mm')
 }
 
 const formatJadwal = (dateString) => {
@@ -283,14 +403,45 @@ const formatDay = (dateString) => {
   }
 }
 
+const formatDateBadge = (dateStr) => {
+  if (!dateStr) return '-'
+  const dateObj = new Date(dateStr)
+  const today = new Date()
+
+  if (dateObj.toDateString() === today.toDateString()) return 'HARI INI'
+
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (dateObj.toDateString() === tomorrow.toDateString()) return 'BESOK'
+
+  return dateObj.toLocaleDateString('id-ID', { weekday: 'short' }).toUpperCase()
+}
+
+const isToday = (dateStr) => {
+  if (!dateStr) return false
+  const dateObj = new Date(dateStr)
+  const today = new Date()
+  return dateObj.toDateString() === today.toDateString()
+}
+
+const getDaysUntil = (dateStr) => {
+  if (!dateStr) return ''
+  const dateObj = new Date(dateStr)
+  const today = new Date()
+  const diffTime = dateObj - today
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'Hari ini'
+  if (diffDays === 1) return 'Besok'
+  return `${diffDays} hari lagi`
+}
+
 const getPickupTime = (jadwal) => {
   if (!jadwal) return '-'
 
-  // fallback kalau null
   const start = jadwal.jam_mulai ? jadwal.jam_mulai.substring(0, 5) : '08:00'
   const end = jadwal.jam_selesai ? jadwal.jam_selesai.substring(0, 5) : '12:00'
 
-  // Tentukan pagi/siang/sore
   const hour = parseInt(start.split(':')[0])
   let label = ''
   if (hour < 12) label = 'Pagi'
@@ -318,105 +469,180 @@ const getStatusIcon = (status) => {
   return 'pending'
 }
 
+const getStatusText = (status) => {
+  if (!status) return 'Menunggu'
+  const statusLower = status.toLowerCase()
+  if (statusLower.includes('selesai')) return 'Selesai'
+  if (statusLower.includes('diproses')) return 'Diproses'
+  if (statusLower.includes('menunggu')) return 'Menunggu'
+  if (statusLower.includes('batal')) return 'Dibatalkan'
+  return status
+}
+
+const getPengajuanMessage = (status) => {
+  const messages = {
+    menunggu: 'Petugas akan menghubungi Anda dalam 1-2 jam',
+    diproses: 'Pengambilan sedang diproses',
+    selesai: 'Pengambilan telah selesai',
+    dibatalkan: 'Pengajuan dibatalkan',
+  }
+  return messages[status] || 'Menunggu konfirmasi petugas'
+}
+
 const clearPengajuanData = () => {
   clearPengajuan()
+  fetchPengajuanList()
 }
 
 const handleAjukan = () => {
-  showDialog.value = true
+  if (jadwalToday.value.length > 0) {
+    showDialog.value = true
+  }
 }
 
 const goToLaporan = () => {
   showDialog.value = false
-  if (jadwalToday.value) {
+  if (jadwalToday.value.length > 0) {
     router.push({
       name: 'UserLaporan',
-      query: { id_jadwal: jadwalToday.value.id },
+      query: {
+        id_jadwal: jadwalToday.value[0].id,
+        tanggal: jadwalToday.value[0].tanggal,
+        wilayah: jadwalToday.value[0].wilayah,
+      },
     })
   }
 }
 
 // Fetch functions
-const fetchUserName = async () => {
+const fetchWargaData = async () => {
   try {
     const user_id = localStorage.getItem('user_id')
     if (!user_id) {
       username.value = 'Pengguna'
+      wilayah.value = '-'
       return
     }
 
     const token = localStorage.getItem('token')
-    const res = await axios.get(`http://localhost:5000/api/warga/by-user/${user_id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+
+    // Coba fetch dari API yang sudah ada
+    const res = await axios.get(`${API_URL}/api/warga`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      params: { user_id: user_id },
     })
 
-    username.value = res.data.data?.nama_warga || 'Pengguna'
-  } catch (err) {
-    console.error('Gagal memuat nama warga:', err)
-    username.value = 'Pengguna'
-  }
-}
-
-const fetchJadwalWeek = async () => {
-  try {
-    const res = await axios.get('http://localhost:5000/api/jadwal/next')
-
-    // ⬇️ karena backend balikin OBJECT
-    jadwalList.value = res.data.data ? [res.data.data] : []
-
-    const todayStr = date.formatDate(new Date(), 'YYYY-MM-DD')
-    jadwalToday.value = jadwalList.value.find((j) => j.tanggal === todayStr) || null
-  } catch (err) {
-    console.error('Gagal ambil jadwal week:', err)
-  }
-}
-
-const fetchJadwalToday = async () => {
-  try {
-    const res = await axios.get('http://localhost:5000/api/jadwal/today')
-    if (res.data.success && res.data.data.length > 0) {
-      jadwalToday.value = res.data.data[0]
+    if (res.data.success && res.data.data && res.data.data.length > 0) {
+      username.value = res.data.data[0].nama_warga || 'Pengguna'
+      wilayah.value = res.data.data[0].wilayah || '-'
     } else {
-      jadwalToday.value = null
+      username.value = 'Pengguna'
+      wilayah.value = '-'
     }
   } catch (err) {
-    console.error('Gagal ambil jadwal today:', err)
-    jadwalToday.value = null
+    console.error('Gagal memuat data warga:', err)
+    username.value = 'Pengguna'
+    wilayah.value = '-'
   }
 }
 
-const fetchStats = async () => {
+const fetchJadwalData = async () => {
   try {
-    const userId = localStorage.getItem('user_id')
-    if (!userId) return
+    const token = localStorage.getItem('token')
 
-    // Get warga by user id
-    const wargaRes = await axios.get(`http://localhost:5000/api/warga/by-user/${userId}`)
-
-    if (!wargaRes.data.success) return
-
-    const id_warga = wargaRes.data.data.id // ⬅ ambil id warga
-
-    const laporanRes = await axios.get(`http://localhost:5000/api/laporan`, {
-      params: { id_warga },
+    // Fetch jadwal hari ini
+    const todayRes = await axios.get(`${API_URL}/api/jadwal/today`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
     })
 
-    const data = laporanRes.data.data || []
+    if (todayRes.data.success) {
+      jadwalToday.value = todayRes.data.data || []
+    }
 
-    totalRiwayat.value = data.length
-    pendingCount.value = data.filter((l) => l.status?.toLowerCase() === 'menunggu').length
-    finishedCount.value = data.filter((l) => l.status?.toLowerCase() === 'selesai').length
+    // Fetch jadwal 7 hari ke depan
+    const weekRes = await axios.get(`${API_URL}/api/jadwal/week`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (weekRes.data.success) {
+      jadwalWeek.value = weekRes.data.data || []
+    }
   } catch (err) {
-    console.error(err)
+    console.error('Gagal memuat jadwal:', err)
+    jadwalToday.value = []
+    jadwalWeek.value = []
+  }
+}
+
+const fetchPengajuanList = async () => {
+  try {
+    const user_id = localStorage.getItem('user_id')
+    if (!user_id) return
+
+    const token = localStorage.getItem('token')
+
+    // Get warga id first
+    const wargaRes = await axios.get(`${API_URL}/api/warga`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      params: { user_id: user_id },
+    })
+
+    if (!wargaRes.data.success || !wargaRes.data.data || wargaRes.data.data.length === 0) return
+
+    const id_warga = wargaRes.data.data[0].id
+
+    // Get laporan/pengajuan
+    const laporanRes = await axios.get(`${API_URL}/api/laporan`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      params: { id_warga: id_warga },
+    })
+
+    if (laporanRes.data.success) {
+      pengajuanList.value = laporanRes.data.data || []
+
+      // Calculate stats
+      pendingCount.value = pengajuanList.value.filter(
+        (p) => p.status === 'menunggu' || p.status === 'diproses',
+      ).length
+
+      finishedCount.value = pengajuanList.value.filter((p) => p.status === 'selesai').length
+    }
+  } catch (err) {
+    console.error('Gagal memuat pengajuan:', err)
+    pengajuanList.value = []
+  }
+}
+
+// Main init
+const initDashboard = async () => {
+  loading.value = true
+  try {
+    await Promise.all([fetchWargaData(), fetchJadwalData(), fetchPengajuanList()])
+  } catch (err) {
+    console.error('Error initializing dashboard:', err)
+  } finally {
+    loading.value = false
   }
 }
 
 // Lifecycle
-onMounted(async () => {
-  await fetchUserName()
-  await fetchJadwalWeek()
-  await fetchJadwalToday()
-  await fetchStats()
+onMounted(() => {
+  initDashboard()
 })
 </script>
 
@@ -497,6 +723,20 @@ onMounted(async () => {
 .action-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Jadwal Mendatang */
+.jadwal-mendatang-card {
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background: white;
+}
+
+.date-badge {
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* Stat Cards */

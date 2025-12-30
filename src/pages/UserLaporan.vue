@@ -1,222 +1,314 @@
 <template>
-  <q-page padding>
-    <h4 class="text-h4 text-dark-green q-my-md q-ml-sm">Ajukan Pengambilan</h4>
-    <p class="text-body1 text-dark-green q-my-sm q-ml-sm">
-      Mengajukan pengambilan sampah kepada petugas, pastikan sampah sudah dipilah
-    </p>
-
-    <q-form @submit.prevent="onSubmit" class="q-gutter-md q-mt-lg">
-      <!-- Jadwal -->
-      <div>
-        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">
-          Jadwal Pengambilan Sampah
-        </label>
-        <q-input outlined readonly :value="jadwalDisplay" class="q-mt-xs form-input" />
-      </div>
-
-      <!-- Jenis Sampah -->
-      <div>
-        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">Jenis Sampah</label>
-        <q-select
-          v-model="jenisSampah"
-          outlined
-          :options="jenisSampahOptions"
-          placeholder="Pilih Jenis Sampah"
-          class="q-mt-xs form-input"
-          dense
-          :rules="[(val) => !!val || 'Jenis sampah tidak boleh kosong']"
-        />
-      </div>
-
-      <!-- Jumlah Karung -->
-      <div>
-        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">Jumlah Karung</label>
-        <q-input
-          v-model.number="jumlahKarung"
-          type="number"
-          outlined
-          dense
-          min="1"
-          class="q-mt-xs form-input"
-          placeholder="Masukkan jumlah karung"
-        >
-          <template v-slot:append>
-            <q-btn flat dense icon="remove" @click="jumlahKarung > 1 ? jumlahKarung-- : null" />
-            <q-btn flat dense icon="add" @click="jumlahKarung++" />
-          </template>
-        </q-input>
-        <div class="text-caption text-dark-green q-mt-xs q-ml-sm">
-          Harga per karung: {{ formatRupiah(hargaPerKarung) }}
+  <q-page class="q-pa-md bg-green-1">
+    <!-- Header -->
+    <div class="row items-center q-mb-lg">
+      <div class="col">
+        <div class="text-h6 text-weight-bold text-dark-green">
+          Form Pengajuan Pengambilan Sampah
+        </div>
+        <div class="text-caption text-grey-7">
+          Isi formulir berikut untuk mengajukan pengambilan sampah
         </div>
       </div>
-
-      <!-- Total Harga -->
-      <div class="q-mt-sm">
-        <label class="text-dark-green q-ml-sm text-body1 text-weight-medium">
-          Total Pembayaran
-        </label>
-        <q-input
-          outlined
-          dense
-          readonly
-          :model-value="formatRupiah(totalPembayaran)"
-          class="q-mt-xs form-input"
-        />
+      <div class="col-auto">
+        <q-btn icon="arrow_back" color="grey" flat round @click="$router.go(-1)" />
       </div>
+    </div>
 
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center q-py-xl">
+      <q-spinner color="primary" size="2em" />
+      <div class="text-grey-7 q-mt-sm">Memuat data...</div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="q-pa-md bg-red-1 rounded-borders q-mb-md">
+      <div class="text-red text-weight-medium">
+        <q-icon name="error" class="q-mr-xs" />
+        {{ error }}
+      </div>
+      <div class="text-caption text-red-7 q-mt-xs">{{ errorDetail }}</div>
       <q-btn
-        label="+ Ajukan Pengambilan"
-        type="submit"
-        size="lg"
-        class="full-width q-mt-lg action-button"
-        rounded
-        no-caps
+        label="Kembali ke Dashboard"
+        color="red"
+        flat
+        dense
+        to="/user/dashboard"
+        class="q-mt-sm"
       />
-    </q-form>
+    </div>
 
-    <!-- Dialog Konfirmasi -->
-    <q-dialog v-model="confirmDialog" persistent>
-      <q-card class="confirm-card">
-        <q-card-section class="text-center q-pt-lg">
-          <q-icon name="help_outline" size="64px" class="icon-green" />
-          <div class="text-h6 text-weight-bold text-dark-green q-mt-md">
-            Ajukan Pengambilan Sampah?
-          </div>
-          <div class="text-body2 text-grey-7 q-mt-sm q-px-md">
-            Pastikan data yang Anda masukkan sudah benar
-          </div>
-        </q-card-section>
-
-        <!-- Preview Data -->
-        <q-card-section>
-          <q-card flat bordered class="preview-box q-mt-md">
-            <q-card-section class="q-pa-md">
-              <div class="q-mb-sm">
-                <div class="text-caption text-grey-7">Jadwal</div>
-                <div class="text-body2 text-weight-bold text-dark-green">{{ jadwalDisplay }}</div>
+    <!-- Main Form -->
+    <div v-else class="row justify-center">
+      <div class="col-12 col-md-8 col-lg-6">
+        <q-card class="form-card q-mb-lg">
+          <q-card-section>
+            <!-- Jadwal Info -->
+            <div class="jadwal-info q-mb-lg">
+              <div class="text-subtitle1 text-weight-bold text-dark-green q-mb-sm">
+                Informasi Jadwal
               </div>
-              <q-separator class="q-my-sm" />
-              <div class="q-mb-sm">
-                <div class="text-caption text-grey-7">Jenis Sampah</div>
-                <div class="text-body2 text-weight-bold text-dark-green">{{ jenisSampah }}</div>
-              </div>
-              <q-separator class="q-my-sm" />
-              <div class="q-mb-sm">
-                <div class="text-caption text-grey-7">Jumlah Karung</div>
-                <div class="text-body2 text-weight-bold text-dark-green">
-                  {{ jumlahKarung }} karung
+              <div class="row q-col-gutter-md">
+                <div class="col-6">
+                  <div class="info-item">
+                    <div class="text-caption text-grey-7">Tanggal</div>
+                    <div class="text-body1 text-weight-medium">
+                      {{ formatDate(jadwalData.tanggal) }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="info-item">
+                    <div class="text-caption text-grey-7">Wilayah</div>
+                    <div class="text-body1 text-weight-medium">
+                      {{ jadwalData.wilayah }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="info-item">
+                    <div class="text-caption text-grey-7">Waktu</div>
+                    <div class="text-body1 text-weight-medium">
+                      {{ jadwalData.jam_mulai }} - {{ jadwalData.jam_selesai }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="info-item">
+                    <div class="text-caption text-grey-7">Petugas</div>
+                    <div class="text-body1 text-weight-medium">
+                      {{ jadwalData.nama_petugas || 'Akan ditugaskan' }}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <q-separator class="q-my-sm" />
-              <div>
-                <div class="text-caption text-grey-7">Total Pembayaran</div>
-                <div class="text-body2 text-weight-bold text-dark-green">
-                  {{ formatRupiah(totalPembayaran) }}
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </q-card-section>
-
-        <!-- Metode Pembayaran -->
-        <q-card-section>
-          <div class="text-caption text-grey-7 q-mb-sm">Metode Pembayaran</div>
-          <q-option-group
-            v-model="metodePembayaran"
-            :options="[
-              { label: 'Cash', value: 'cash' },
-              { label: 'QRIS', value: 'qris' },
-            ]"
-            color="primary"
-          />
-          <div v-if="metodePembayaran === 'qris'" class="text-center q-mt-md">
-            <img src="../assets/qris-example.jpg" alt="QRIS" style="width: 180px" />
-            <div class="text-grey-7 q-mt-sm">
-              Silakan scan QRIS dan lakukan pembayaran sebesar <br />{{
-                formatRupiah(totalPembayaran)
-              }}
             </div>
+
+            <!-- Info Warga -->
+            <div class="warga-info q-mb-lg bg-blue-1 q-pa-md rounded-borders">
+              <div class="text-subtitle1 text-weight-bold text-dark-green q-mb-sm">Data Warga</div>
+              <div class="row q-col-gutter-md">
+                <div class="col-6">
+                  <div class="info-item">
+                    <div class="text-caption text-grey-7">Nama</div>
+                    <div class="text-body1 text-weight-medium">
+                      {{ wargaData.nama_warga }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="info-item">
+                    <div class="text-caption text-grey-7">No. Telepon</div>
+                    <div class="text-body1 text-weight-medium">
+                      {{ wargaData.no_telepon }}
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="info-item">
+                    <div class="text-caption text-grey-7">Alamat</div>
+                    <div class="text-body1 text-weight-medium">
+                      {{ wargaData.alamat_lengkap }} RT {{ wargaData.rt }}/RW {{ wargaData.rw }},
+                      {{ wargaData.wilayah }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Pengajuan -->
+            <q-form @submit="submitPengajuan" class="q-gutter-md">
+              <!-- Jenis Sampah (tetap sama) -->
+              <div class="q-mb-md">
+                <div class="text-subtitle2 text-weight-bold q-mb-sm">Jenis Sampah</div>
+                <div class="text-caption text-grey-7 q-mb-md">
+                  Pilih jenis sampah yang akan diambil (bisa lebih dari satu)
+                </div>
+
+                <div class="row q-col-gutter-sm">
+                  <div
+                    v-for="jenis in jenisSampahOptions"
+                    :key="jenis.value"
+                    class="col-6 col-sm-4"
+                  >
+                    <q-card
+                      class="jenis-card cursor-pointer"
+                      :class="{ selected: form.jenis_sampah.includes(jenis.value) }"
+                      @click="toggleJenisSampah(jenis.value)"
+                    >
+                      <q-card-section class="text-center q-pa-sm">
+                        <q-icon :name="jenis.icon" size="md" :color="jenis.color" class="q-mb-xs" />
+                        <div class="text-caption text-weight-medium">{{ jenis.label }}</div>
+                        <div class="text-caption text-grey-7">{{ jenis.desc }}</div>
+                      </q-card-section>
+                    </q-card>
+                  </div>
+                </div>
+
+                <!-- Custom Input -->
+                <div class="q-mt-md">
+                  <q-input
+                    v-model="form.jenis_lainnya"
+                    label="Jenis Sampah Lainnya"
+                    outlined
+                    dense
+                    placeholder="Masukkan jenis sampah lainnya..."
+                    :disable="form.jenis_sampah.length === 0"
+                  />
+                </div>
+              </div>
+
+              <!-- Estimasi Volume (tetap sama) -->
+              <div class="q-mb-md">
+                <div class="text-subtitle2 text-weight-bold q-mb-sm">Estimasi Volume Sampah</div>
+
+                <q-radio
+                  v-model="form.estimasi_volume"
+                  val="sedikit"
+                  label="Sedikit (1-2 kantong)"
+                  class="q-mb-xs"
+                />
+                <q-radio
+                  v-model="form.estimasi_volume"
+                  val="sedang"
+                  label="Sedang (3-5 kantong)"
+                  class="q-mb-xs"
+                />
+                <q-radio v-model="form.estimasi_volume" val="banyak" label="Banyak (6+ kantong)" />
+              </div>
+
+              <!-- Keterangan Tambahan -->
+              <div class="q-mb-md">
+                <q-input
+                  v-model="form.keterangan"
+                  label="Keterangan Tambahan"
+                  outlined
+                  type="textarea"
+                  rows="2"
+                  placeholder="Contoh: Sampah sudah dipilah, ada sampah besar, lokasi khusus, dll..."
+                />
+              </div>
+
+              <!-- Upload Foto (tetap sama) -->
+              <div class="q-mb-lg">
+                <div class="text-subtitle2 text-weight-bold q-mb-sm">Foto Sampah (Opsional)</div>
+                <div class="text-caption text-grey-7 q-mb-sm">
+                  Upload foto sampah untuk membantu petugas
+                </div>
+
+                <div
+                  class="upload-area q-pa-lg text-center cursor-pointer rounded-borders bg-grey-2"
+                  @click="triggerFileUpload"
+                >
+                  <input
+                    ref="fileInput"
+                    type="file"
+                    accept="image/*"
+                    style="display: none"
+                    @change="handleFileUpload"
+                  />
+
+                  <q-icon name="cloud_upload" size="48px" color="grey-5" class="q-mb-sm" />
+                  <div class="text-subtitle2 text-grey-7">Klik untuk upload foto</div>
+                  <div class="text-caption text-grey-6">Maksimal 2MB, format JPG/PNG</div>
+                </div>
+
+                <!-- Preview Foto -->
+                <div v-if="form.foto_sampah" class="q-mt-sm">
+                  <div class="text-caption text-grey-7 q-mb-xs">Preview:</div>
+                  <div class="photo-preview">
+                    <q-img
+                      :src="form.foto_sampah"
+                      style="height: 100px; width: 100px"
+                      class="rounded-borders"
+                    />
+                    <q-btn
+                      icon="close"
+                      size="sm"
+                      flat
+                      round
+                      color="red"
+                      class="remove-photo"
+                      @click="removePhoto"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="row q-col-gutter-sm">
+                <div class="col-6">
+                  <q-btn
+                    label="Batal"
+                    color="grey"
+                    class="full-width"
+                    :to="{ name: 'UserDashboard' }"
+                  />
+                </div>
+                <div class="col-6">
+                  <q-btn
+                    label="Ajukan"
+                    color="primary"
+                    class="full-width"
+                    type="submit"
+                    :loading="submitting"
+                    :disable="!isFormValid"
+                  />
+                </div>
+              </div>
+            </q-form>
+          </q-card-section>
+        </q-card>
+
+        <!-- Info Penting -->
+        <q-card class="info-card">
+          <q-card-section>
+            <div class="text-subtitle2 text-weight-bold text-dark-green q-mb-sm">
+              📌 Informasi Penting
+            </div>
+            <ul class="info-list">
+              <li>Data alamat, RT/RW, dan kontak diambil dari profil warga</li>
+              <li>Waktu pengambilan mengikuti jadwal yang dipilih</li>
+              <li>Sampah harus sudah dipilah sesuai jenisnya sebelum pengambilan</li>
+              <li>Pastikan sampah dalam kantong yang tertutup rapat</li>
+              <li>Petugas akan menghubungi 1-2 jam sebelum pengambilan</li>
+              <li>Pengajuan akan diverifikasi oleh petugas terlebih dahulu</li>
+            </ul>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Success Dialog -->
+    <q-dialog v-model="showSuccessDialog" persistent>
+      <q-card class="success-dialog">
+        <q-card-section class="text-center">
+          <q-avatar color="green" text-color="white" size="lg" class="q-mb-sm">
+            <q-icon name="check" />
+          </q-avatar>
+          <div class="text-h6 text-weight-bold text-green q-mb-sm">Pengajuan Berhasil!</div>
+          <div class="text-body2 text-grey-7 q-mb-md">
+            Pengajuan pengambilan sampah Anda telah dikirim. Petugas akan menghubungi dalam 1-2 jam.
+          </div>
+          <div class="text-caption text-grey-6">
+            Kode Pengajuan: <strong>{{ kodePengajuan }}</strong>
           </div>
         </q-card-section>
 
-        <q-card-actions class="q-px-md q-pb-lg q-pt-none q-gutter-sm">
-          <q-btn
-            label="Batal"
-            flat
-            class="full-width"
-            color="grey-7"
-            rounded
-            no-caps
-            v-close-popup
-          />
-          <q-btn
-            v-if="metodePembayaran === 'cash'"
-            label="Ya, Ajukan"
-            class="full-width confirm-btn"
-            rounded
-            no-caps
-            @click="submitPengajuan"
-          />
-          <q-btn
-            v-if="metodePembayaran === 'qris'"
-            label="Sudah Bayar"
-            class="full-width confirm-btn"
-            rounded
-            no-caps
-            @click="submitPengajuan"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Dialog Success -->
-    <q-dialog v-model="successDialog" persistent>
-      <q-card class="success-card">
-        <q-card-section class="text-center q-pt-xl q-pb-lg">
-          <div class="success-icon-wrapper q-mb-md">
-            <q-icon name="check_circle" size="80px" color="positive" class="success-icon" />
-          </div>
-          <div class="text-h5 text-weight-bold text-dark-green q-mb-sm">Pengajuan Berhasil!</div>
-          <div class="text-body1 text-grey-7 q-px-md">
-            Pengajuan pengambilan sampah Anda telah diterima
-          </div>
-
-          <q-card flat bordered class="info-box q-mt-lg q-mx-md">
-            <q-card-section class="q-pa-md">
-              <div class="row items-center q-gutter-sm q-mb-sm">
-                <q-icon name="schedule" class="icon-green" size="20px" />
-                <span class="text-caption text-grey-7">Detail Pengajuan</span>
-              </div>
-              <div class="text-body2 text-dark-green q-mb-xs">
-                <strong>Jadwal:</strong> {{ formatJadwal(jadwal) }}
-              </div>
-              <div class="text-body2 text-dark-green">
-                <strong>Jenis:</strong> {{ jenisSampah }}
-              </div>
-              <div class="text-body2 text-dark-green q-mb-xs">
-                <strong>Jumlah Karung:</strong> {{ jumlahKarung }}
-              </div>
-              <div class="text-body2 text-dark-green q-mb-xs">
-                <strong>Total Pembayaran:</strong> {{ formatRupiah(totalPembayaran) }}
-              </div>
-              <q-separator class="q-my-sm" />
-              <div class="text-body2 text-weight-bold text-orange q-mt-sm">
-                Status: Menunggu Konfirmasi
-              </div>
-            </q-card-section>
-          </q-card>
-          <div class="text-caption text-grey-6 q-mt-md q-px-lg">
-            Petugas akan segera mengkonfirmasi jadwal pengambilan sampah Anda
-          </div>
-        </q-card-section>
-        <q-card-actions class="q-px-lg q-pb-lg">
+        <q-card-actions align="center" class="q-pb-md">
           <q-btn
             label="Kembali ke Dashboard"
-            class="full-width success-btn"
-            size="lg"
-            rounded
-            no-caps
-            @click="closeSuccessDialog"
+            color="primary"
+            unelevated
+            :to="{ name: 'UserDashboard' }"
+            class="q-px-lg"
+          />
+          <q-btn
+            label="Lihat Status"
+            color="green"
+            flat
+            :to="{ name: 'UserDashboard' }"
+            class="q-px-lg"
           />
         </q-card-actions>
       </q-card>
@@ -226,289 +318,460 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router' // Tambah useRouter
+import { date } from 'quasar'
 import axios from 'axios'
 
-const $q = useQuasar()
-const router = useRouter()
 const route = useRoute()
+//const router = useRouter() // Inisialisasi router
+const API_URL = 'http://localhost:5000'
 
-const jadwal = ref('')
-const jadwalDisplay = ref('Memuat jadwal...')
-const jenisSampah = ref('')
-const metodePembayaran = ref('cash')
-const jumlahKarung = ref(0)
-const hargaPerKarung = ref(5000)
-const confirmDialog = ref(false)
-const successDialog = ref(false)
-const userId = localStorage.getItem('user_id') || null
+// Refs
+const loading = ref(true)
+const error = ref('')
+const errorDetail = ref('')
+const submitting = ref(false)
+const showSuccessDialog = ref(false)
+const kodePengajuan = ref('')
+const fileInput = ref(null)
 
-const jenisSampahOptions = [
-  'Organik',
-  'Anorganik',
-  'B3 (Bahan Berbahaya dan Beracun)',
-  'Kertas',
-  'Plastik',
-  'Logam',
-  'Kaca',
-  'Elektronik',
-]
+// Data
+const jadwalData = ref({
+  id: null,
+  tanggal: '',
+  wilayah: '',
+  jam_mulai: '',
+  jam_selesai: '',
+  nama_petugas: '',
+})
 
-const totalPembayaran = computed(() => jumlahKarung.value * hargaPerKarung.value)
+const wargaData = ref({
+  id: null,
+  nama_warga: '',
+  alamat: '',
+  no_telepon: '',
+  rt: '',
+  rw: '',
+  wilayah: '',
+})
 
-const pad = (n) => n.toString().padStart(2, '0')
+// Form Data - HAPUS field yang sudah ada di warga
+const form = ref({
+  id_jadwal: '',
+  id_warga: '',
+  jenis_sampah: [],
+  jenis_lainnya: '',
+  estimasi_volume: 'sedang',
+  keterangan: '',
+  foto_sampah: null,
+  // HAPUS: alamat_detail, rt, rw, nomor_hp, nama_pemohon, waktu_pengambilan
+})
 
-const formatRupiah = (value) => 'Rp ' + value.toLocaleString('id-ID')
+// Options
+const jenisSampahOptions = ref([
+  {
+    value: 'organik',
+    label: 'Organik',
+    desc: 'Sisa makanan, daun, dll',
+    icon: 'grass',
+    color: 'green',
+  },
+  {
+    value: 'anorganik',
+    label: 'Anorganik',
+    desc: 'Plastik, kertas, logam',
+    icon: 'recycling',
+    color: 'blue',
+  },
+  {
+    value: 'b3',
+    label: 'B3',
+    desc: 'Baterai, elektronik',
+    icon: 'warning',
+    color: 'red',
+  },
+  {
+    value: 'kertas',
+    label: 'Kertas',
+    desc: 'Koran, kardus, buku',
+    icon: 'description',
+    color: 'brown',
+  },
+  {
+    value: 'plastik',
+    label: 'Plastik',
+    desc: 'Botol, kemasan',
+    icon: 'water_bottle',
+    color: 'teal',
+  },
+  {
+    value: 'logam',
+    label: 'Logam',
+    desc: 'Kaleng, besi',
+    icon: 'handyman',
+    color: 'orange',
+  },
+])
 
-// Format untuk tampilan
-const formatJadwal = (dateString) => {
+// HAPUS waktuOptions karena sudah diambil dari jadwal
+
+// Computed - HAPUS validasi untuk field yang dihapus
+const isFormValid = computed(() => {
+  return (
+    form.value.jenis_sampah.length > 0 && form.value.estimasi_volume
+    // HAPUS validasi untuk: alamat_detail, rt, rw, nomor_hp, nama_pemohon, waktu_pengambilan
+  )
+})
+
+// Methods
+const formatDate = (dateString) => {
   if (!dateString) return '-'
   try {
-    const [datePart, timePart] = dateString.split(' ')
-    const [year, month, day] = datePart.split('-')
-    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
-    const monthNames = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ]
-    const date = new Date(year, month - 1, day)
-    const dayName = dayNames[date.getDay()]
-    return `${dayName}, ${day} ${monthNames[month - 1]} ${year}${timePart ? ' • ' + timePart + ' WIB' : ''}`
+    return date.formatDate(dateString, 'dddd, D MMMM YYYY')
   } catch {
     return dateString
   }
 }
 
-onMounted(async () => {
-  const idJadwal = route.query.id_jadwal
-  if (!idJadwal) {
-    jadwalDisplay.value = 'Jadwal tidak tersedia'
-    return $q.notify({
-      type: 'warning',
-      message: 'ID jadwal tidak ditemukan',
-      position: 'top',
-      timeout: 2000,
-    })
+const toggleJenisSampah = (jenis) => {
+  const index = form.value.jenis_sampah.indexOf(jenis)
+  if (index === -1) {
+    form.value.jenis_sampah.push(jenis)
+  } else {
+    form.value.jenis_sampah.splice(index, 1)
+  }
+}
+
+const triggerFileUpload = () => {
+  fileInput.value?.click()
+}
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // Validasi file
+  if (file.size > 2 * 1024 * 1024) {
+    // 2MB
+    alert('Ukuran file maksimal 2MB')
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('Hanya file gambar yang diperbolehkan')
+    return
+  }
+
+  // Convert to base64
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    form.value.foto_sampah = e.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+const removePhoto = () => {
+  form.value.foto_sampah = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+// Fetch Data
+const fetchJadwalData = async () => {
+  const id_jadwal = route.query.id_jadwal
+  if (!id_jadwal) {
+    throw new Error('ID jadwal tidak ditemukan')
+  }
+
+  const token = localStorage.getItem('token')
+  const response = await axios.get(`${API_URL}/api/jadwal/${id_jadwal}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  if (response.data.success) {
+    jadwalData.value = {
+      id: id_jadwal,
+      tanggal: response.data.data.tanggal,
+      wilayah: response.data.data.wilayah,
+      jam_mulai: response.data.data.jam_mulai?.substring(0, 5) || '08:00',
+      jam_selesai: response.data.data.jam_selesai?.substring(0, 5) || '12:00',
+      nama_petugas: response.data.data.nama_petugas,
+    }
+    form.value.id_jadwal = id_jadwal
+  } else {
+    throw new Error(response.data.message || 'Gagal mengambil data jadwal')
+  }
+}
+
+// Fetch data warga dengan token
+const fetchWargaData = async () => {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    throw new Error('Token tidak ditemukan. Silakan login kembali')
   }
 
   try {
-    const res = await axios.get(`http://localhost:5000/api/jadwal/${idJadwal}`)
-    if (res.data.success && res.data.data) {
-      const j = res.data.data
-      const rawTanggal = j.tanggal
-      const dateObj = new Date(rawTanggal)
-      if (isNaN(dateObj.getTime())) throw new Error('Tanggal dari API tidak valid')
-      const formattedTanggal = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`
-      let jamMulai = j.jam_mulai || '08:00:00'
-      if (jamMulai.length === 5) jamMulai += ':00'
+    console.log('Fetching warga data...')
 
-      // Display rapi
-      const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
-      const monthNames = [
-        'Januari',
-        'Februari',
-        'Maret',
-        'April',
-        'Mei',
-        'Juni',
-        'Juli',
-        'Agustus',
-        'September',
-        'Oktober',
-        'November',
-        'Desember',
-      ]
-      const dayName = dayNames[dateObj.getDay()]
-      const day = dateObj.getDate()
-      const month = monthNames[dateObj.getMonth()]
-      const year = dateObj.getFullYear()
-      jadwalDisplay.value = `${dayName}, ${day} ${month} ${year} • ${j.jam_mulai.slice(0, 5)} - ${j.jam_selesai.slice(0, 5)} WIB`
+    const response = await axios.get(`${API_URL}/api/warga`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
 
-      // Simpan untuk validasi & backend
-      window.currentJadwalData = { tanggal: formattedTanggal, jam_mulai: jamMulai }
-      jadwal.value = formattedTanggal + ' ' + jamMulai
+    console.log('API Response:', response.data)
+
+    if (response.data.success && response.data.data && response.data.data.length > 0) {
+      // Ambil data warga pertama
+      const warga = response.data.data[0]
+
+      // PERHATIAN: Gunakan field sesuai API response
+      wargaData.value = {
+        id: warga.id,
+        nama_warga: warga.nama_lengkap, // dari API: nama_lengkap
+        alamat: warga.alamat_lengkap, // dari API: alamat_lengkap
+        no_telepon: warga.no_telp, // dari API: no_telp (bukan no_telepon)
+        rt: warga.rt,
+        rw: warga.rw,
+        wilayah: warga.kelurahan, // dari API: kelurahan
+      }
+
+      form.value.id_warga = wargaData.value.id
+
+      console.log('Warga data loaded:', wargaData.value)
     } else {
-      jadwalDisplay.value = 'Jadwal tidak ditemukan'
+      throw new Error('Data warga tidak ditemukan')
+    }
+  } catch (error) {
+    console.error('Error fetching warga:', error)
+
+    // Fallback untuk testing
+    console.warn('Using fallback data for testing...')
+    wargaData.value = {
+      id: 1,
+      nama_warga: 'Cicih',
+      alamat: 'Bandung',
+      no_telepon: '08157252232342',
+      rt: '02',
+      rw: '01',
+      wilayah: 'Suraja',
+    }
+    form.value.id_warga = wargaData.value.id
+  }
+}
+
+const submitPengajuan = async () => {
+  submitting.value = true
+  error.value = ''
+  errorDetail.value = ''
+
+  try {
+    const token = localStorage.getItem('token')
+
+    if (!token) {
+      throw new Error('Token tidak ditemukan. Silakan login kembali')
+    }
+
+    console.log('=== SUBMIT DEBUG ===')
+    console.log('Token:', token.substring(0, 20) + '...')
+
+    // Pastikan data valid
+    if (!wargaData.value.id) {
+      throw new Error('Data warga tidak valid')
+    }
+
+    if (!form.value.id_jadwal) {
+      throw new Error('Jadwal tidak valid')
+    }
+
+    // Siapkan data
+    const submissionData = {
+      id_jadwal: form.value.id_jadwal || 1,
+      id_warga: wargaData.value.id || 1,
+      jenis_sampah: form.value.jenis_sampah.join(', ') || 'organik',
+      jenis_lainnya: form.value.jenis_lainnya || '',
+      estimasi_volume: form.value.estimasi_volume || 'sedang',
+      alamat_detail: `${wargaData.value.alamat} RT ${wargaData.value.rt}/RW ${wargaData.value.rw}, ${wargaData.value.wilayah}`,
+
+      rt: wargaData.value.rt || '01',
+      rw: wargaData.value.rw || '01',
+      nomor_hp: wargaData.value.no_telepon || '081234567890',
+      nama_pemohon: wargaData.value.nama_warga || 'Warga',
+      keterangan: form.value.keterangan || '',
+      waktu_pengambilan: 'pagi',
+      foto_sampah: form.value.foto_sampah || null,
+      status: 'menunggu',
+    }
+
+    console.log('Data to send:', submissionData)
+
+    // Coba dengan fetch terlebih dahulu
+    const response = await fetch(`${API_URL}/api/laporan`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(submissionData),
+    })
+
+    console.log('Response status:', response.status)
+
+    const data = await response.json()
+    console.log('Response data:', data)
+
+    if (response.ok && data.success) {
+      kodePengajuan.value = data.data?.kode_laporan || 'LAP-' + Date.now()
+      showSuccessDialog.value = true
+
+      // Clear form
+      form.value.jenis_sampah = []
+      form.value.jenis_lainnya = ''
+      form.value.estimasi_volume = 'sedang'
+      form.value.keterangan = ''
+      form.value.foto_sampah = null
+    } else {
+      if (data.errors && data.errors.length > 0) {
+        throw new Error(data.errors.join(', '))
+      } else {
+        throw new Error(data.message || 'Gagal submit')
+      }
     }
   } catch (err) {
-    console.error(err)
-    jadwalDisplay.value = 'Gagal memuat jadwal'
+    console.error('Submit error details:', err)
+    error.value = 'Gagal mengajukan pengambilan'
+    errorDetail.value = err.message || 'Terjadi kesalahan'
+
+    if (err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
+      errorDetail.value = 'Koneksi ke server terputus'
+    } else {
+      errorDetail.value = err.message
+    }
+  } finally {
+    submitting.value = false
   }
+}
+
+// Fungsi test koneksi
+
+// Initialize
+const initForm = async () => {
+  loading.value = true
+  error.value = ''
+  errorDetail.value = ''
+
+  try {
+    await Promise.all([fetchJadwalData(), fetchWargaData()])
+  } catch (err) {
+    console.error('Init error:', err)
+    error.value = 'Gagal memuat data form'
+    errorDetail.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// Lifecycle
+onMounted(() => {
+  initForm()
 })
-
-const onSubmit = () => {
-  if (!jadwal.value || !jenisSampah.value) {
-    return $q.notify({
-      type: 'negative',
-      message: 'Mohon lengkapi semua data',
-      position: 'top',
-      timeout: 2000,
-    })
-  }
-  confirmDialog.value = true
-}
-
-async function submitPengajuan() {
-  if (!userId) {
-    return $q.notify({ type: 'negative', message: 'User belum login' })
-  }
-  if (jumlahKarung.value < 1) {
-    return $q.notify({ type: 'negative', message: 'Jumlah karung minimal 1' })
-  }
-
-  try {
-    const [tanggal, jam] = jadwal.value.split(' ')
-    const payload = {
-      user_id: userId,
-      alamat: '',
-      sudah_dipilah: 1,
-      jumlah_karung: jumlahKarung.value,
-      jenis_pembayaran: metodePembayaran.value,
-      tanggal_pengambilan: tanggal,
-      jam_pengambilan: jam,
-      jenis_sampah: jenisSampah.value,
-    }
-
-    const res = await axios.post('http://localhost:5000/api/laporan', payload)
-    if (res.data.success) {
-      console.log('Laporan berhasil dibuat, ID:', res.data.laporan_id)
-      confirmDialog.value = false
-      successDialog.value = true
-    } else {
-      $q.notify({ type: 'negative', message: res.data.message })
-    }
-  } catch (err) {
-    console.error(err)
-    $q.notify({ type: 'negative', message: 'Gagal mengajukan laporan' })
-  }
-}
-
-const closeSuccessDialog = () => {
-  successDialog.value = false
-  jadwal.value = ''
-  jenisSampah.value = ''
-  router.push({ name: 'UserDashboard' })
-}
 </script>
 
-<style lang="scss" scoped>
-$dark-green: #08602e;
-$dark-green-hover: #06481f;
-$yellow-accent: #ffd155;
-
+<style scoped>
 .text-dark-green {
-  color: $dark-green;
+  color: #08602e !important;
 }
 
-.icon-green {
-  color: $dark-green;
+/* Form Card */
+.form-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-.action-button {
-  background-color: $yellow-accent !important;
-  color: $dark-green !important;
-  font-weight: 700;
+/* Jadwal Info */
+.jadwal-info {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.info-item {
+  padding: 8px 0;
+}
+
+/* Jenis Sampah Cards */
+.jenis-card {
+  border: 2px solid transparent;
+  border-radius: 12px;
   transition: all 0.3s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 209, 85, 0.4);
-  }
 }
 
-.form-input {
-  :deep(.q-field__control) {
-    border-radius: 12px;
-    color: $dark-green;
-  }
-
-  :deep(.q-field__native) {
-    color: $dark-green;
-  }
-
-  :deep(.q-field__label) {
-    color: $dark-green;
-  }
+.jenis-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-// Dialog Styles
-.confirm-card {
+.jenis-card.selected {
+  border-color: #1976d2;
+  background-color: rgba(25, 118, 210, 0.05);
+}
+
+/* Upload Area */
+.upload-area {
+  border: 2px dashed #ced4da;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+  border-color: #1976d2;
+  background-color: rgba(25, 118, 210, 0.05);
+}
+
+/* Photo Preview */
+.photo-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.remove-photo {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Info Card */
+.info-card {
+  border-radius: 12px;
+  border-left: 4px solid #08602e;
+  background: #f8fff9;
+}
+
+.info-list {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.info-list li {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Success Dialog */
+.success-dialog {
   border-radius: 20px;
   min-width: 320px;
   max-width: 400px;
 }
-
-.preview-box {
-  border-radius: 12px;
-  border-color: rgba(8, 96, 46, 0.2);
-  background: #f9fafb;
-}
-
-.confirm-btn {
-  background-color: $dark-green !important;
-  color: white !important;
-  font-weight: 600;
-}
-
-.success-card {
-  border-radius: 24px;
-  min-width: 340px;
-  max-width: 420px;
-}
-
-.success-icon-wrapper {
-  animation: scaleIn 0.5s ease-out;
-}
-
-.success-icon {
-  filter: drop-shadow(0 4px 8px rgba(76, 175, 80, 0.3));
-}
-
-.info-box {
-  border-radius: 12px;
-  border-color: rgba(8, 96, 46, 0.2);
-  background: linear-gradient(135deg, #f1f8f4 0%, #ffffff 100%);
-}
-
-.success-btn {
-  background-color: $dark-green !important;
-  color: white !important;
-  font-weight: 700;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background-color: $dark-green-hover !important;
-  }
-}
-
-// Animations
-@keyframes scaleIn {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-// Color utilities
-.text-orange {
-  color: #ff9800;
+.warga-info {
+  border: 1px solid #b3e0ff;
+  background-color: #e6f7ff;
 }
 </style>
