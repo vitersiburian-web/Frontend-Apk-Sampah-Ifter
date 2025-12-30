@@ -1,643 +1,697 @@
 <template>
-  <q-page class="q-pa-md bg-green-1">
-    <!-- HEADER -->
-    <div class="q-mb-lg">
-      <div class="text-h6 text-weight-bold text-primary">Dashboard Admin</div>
-      <div class="text-caption text-grey-7">Ringkasan keuangan dan aktivitas terbaru</div>
-    </div>
-
-    <!-- STAT CARDS -->
-    <div class="row q-col-gutter-sm q-mb-lg">
-      <div class="col-6 col-md-3">
-        <q-card class="stat-card">
-          <q-card-section class="text-center">
-            <q-icon name="attach_money" color="green-8" size="md" class="q-mb-sm" />
-            <div class="text-h6 text-weight-bold text-dark">
-              Rp {{ formatCurrency(totalHariIni) }}
-            </div>
-            <div class="text-caption text-grey-7">Pendapatan Hari Ini</div>
-          </q-card-section>
-        </q-card>
+  <q-page class="q-pa-md bg-grey-1">
+    <!-- Header dengan Welcome & Date -->
+    <div class="row items-center q-mb-lg">
+      <div class="col">
+        <div class="text-h4 text-weight-bold text-primary">Dashboard Admin</div>
+        <div class="text-subtitle1 text-grey-7">{{ welcomeMessage }} • {{ currentDate }}</div>
       </div>
-
-      <div class="col-6 col-md-3">
-        <q-card class="stat-card">
-          <q-card-section class="text-center">
-            <q-icon name="local_shipping" color="blue-8" size="md" class="q-mb-sm" />
-            <div class="text-h6 text-weight-bold text-dark">
-              {{ pengambilanHariIni }}
-            </div>
-            <div class="text-caption text-grey-7">Pengambilan Hari Ini</div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <q-card class="stat-card">
-          <q-card-section class="text-center">
-            <q-icon name="support_agent" color="orange-8" size="md" class="q-mb-sm" />
-            <div class="text-h6 text-weight-bold text-dark">
-              {{ petugasCount }}
-            </div>
-            <div class="text-caption text-grey-7">Petugas Aktif</div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-6 col-md-3">
-        <q-card class="stat-card">
-          <q-card-section class="text-center">
-            <q-icon name="group" color="red-8" size="md" class="q-mb-sm" />
-            <div class="text-h6 text-weight-bold text-dark">
-              {{ userCount }}
-            </div>
-            <div class="text-caption text-grey-7">User Terdaftar</div>
-          </q-card-section>
-        </q-card>
+      <div class="col-auto">
+        <q-btn color="primary" icon="refresh" round @click="refreshDashboard" :loading="loading">
+          <q-tooltip>Refresh Dashboard</q-tooltip>
+        </q-btn>
       </div>
     </div>
 
-    <!-- CHARTS SECTION -->
+    <!-- QUICK STATS CARDS -->
     <div class="row q-col-gutter-md q-mb-lg">
-      <!-- Grafik Keuangan -->
-      <div class="col-12 col-md-6">
-        <q-card class="chart-card">
-          <q-card-section class="q-pb-sm">
-            <div class="text-subtitle1 text-weight-bold text-primary">
-              Tren Saldo (7 Hari Terakhir)
+      <!-- Today's Revenue -->
+      <div class="col-12 col-sm-6 col-md-3">
+        <q-card class="bg-blue-grey-1">
+          <q-card-section class="text-center">
+            <div class="text-h6 text-weight-bold text-blue-grey-10">
+              {{ formatCurrency(stats.today?.total || 0) }}
             </div>
-            <div class="text-caption text-grey-7">Perkembangan saldo mingguan</div>
+            <div class="text-caption text-blue-grey-8">Hari Ini</div>
+            <div class="text-caption text-blue-grey-6">
+              {{ stats.today?.transaksi || 0 }} transaksi
+            </div>
           </q-card-section>
+        </q-card>
+      </div>
 
-          <q-separator />
+      <!-- Monthly Revenue -->
+      <div class="col-12 col-sm-6 col-md-3">
+        <q-card class="bg-cyan-1">
+          <q-card-section class="text-center">
+            <div class="text-h6 text-weight-bold text-cyan-10">
+              {{ formatCurrency(stats.month?.total || 0) }}
+            </div>
+            <div class="text-caption text-cyan-8">Bulan Ini</div>
+            <div class="text-caption text-cyan-6">{{ stats.month?.transaksi || 0 }} transaksi</div>
+          </q-card-section>
+        </q-card>
+      </div>
 
-          <q-card-section class="chart-container">
-            <div class="chart-wrapper" @mouseleave="hideTooltip">
-              <svg viewBox="0 0 100 50" class="chart-svg">
-                <!-- Area background -->
-                <polygon :points="areaPoints" fill="rgba(33, 186, 69, 0.15)" />
+      <!-- Active Petugas -->
+      <div class="col-12 col-sm-6 col-md-3">
+        <q-card class="bg-green-1">
+          <q-card-section class="text-center">
+            <div class="text-h6 text-weight-bold text-green-10">
+              {{ stats.active_petugas?.count || 0 }}
+            </div>
+            <div class="text-caption text-green-8">Petugas Aktif</div>
+            <div class="text-caption text-green-6">
+              {{ stats.petugas_stats?.total_petugas || 0 }} total
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
 
-                <!-- Chart line -->
-                <polyline
-                  :points="chartPoints"
-                  fill="none"
-                  stroke="#21ba45"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+      <!-- Today's Schedule -->
+      <div class="col-12 col-sm-6 col-md-3">
+        <q-card class="bg-orange-1">
+          <q-card-section class="text-center">
+            <div class="text-h6 text-weight-bold text-orange-10">
+              {{ stats.today_schedule_count?.count || 0 }}
+            </div>
+            <div class="text-caption text-orange-8">Jadwal Hari Ini</div>
+            <q-btn
+              v-if="stats.today_schedule_count?.count > 0"
+              label="Lihat"
+              color="orange"
+              flat
+              dense
+              @click="viewSchedule"
+              class="q-mt-xs"
+            />
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- MAIN CONTENT ROW -->
+    <div class="row q-col-gutter-lg">
+      <!-- LEFT COLUMN: Charts -->
+      <div class="col-12 col-lg-8">
+        <!-- Revenue Chart -->
+        <q-card class="q-mb-lg shadow-1">
+          <q-card-section>
+            <div class="row items-center">
+              <div class="col">
+                <div class="text-h6">Trend 7 Hari Terakhir</div>
+                <div class="text-caption text-grey-6">Pemasukan vs Pengeluaran</div>
+              </div>
+              <div class="col-auto">
+                <q-btn-toggle
+                  v-model="chartPeriod"
+                  :options="chartPeriodOptions"
+                  spread
+                  dense
+                  color="primary"
+                  flat
                 />
-
-                <!-- Data points -->
-                <circle
-                  v-for="(p, idx) in pointList"
-                  :key="idx"
-                  :cx="p.x"
-                  :cy="p.y"
-                  r="2.5"
-                  fill="#21ba45"
-                  stroke="white"
-                  stroke-width="1"
-                  class="data-point"
-                  @mouseenter="showTooltipAt(idx)"
-                />
-              </svg>
-
-              <!-- Tooltip -->
-              <div
-                v-if="tooltipVisible"
-                class="chart-tooltip"
-                :style="{ left: tooltipX + 'px', top: tooltipY + 'px' }"
-              >
-                <div class="tooltip-date">{{ tooltipDate }}</div>
-                <div class="tooltip-value text-weight-bold">
-                  Rp {{ formatCurrency(tooltipValue) }}
-                </div>
               </div>
             </div>
-
-            <div class="text-caption text-grey-6 q-mt-md text-center">
-              Update terakhir: {{ formatDateDisplay(today) }}
-            </div>
+          </q-card-section>
+          <q-card-section style="height: 300px">
+            <canvas ref="revenueChart"></canvas>
           </q-card-section>
         </q-card>
-      </div>
 
-      <!-- Grafik Jumlah Karung -->
-      <div class="col-12 col-md-6">
-        <q-card class="chart-card">
-          <q-card-section class="q-pb-sm">
-            <div class="text-subtitle1 text-weight-bold text-primary">
-              Volume Karung (7 Hari Terakhir)
-            </div>
-            <div class="text-caption text-grey-7">Jumlah karung per hari</div>
-          </q-card-section>
-
-          <q-separator />
-
-          <q-card-section class="chart-container">
-            <div class="bar-chart-wrapper">
-              <div class="chart-bar-3d">
-                <div
-                  v-for="(item, idx) in weeklyKarungData"
-                  :key="idx"
-                  class="bar-container"
-                  @mouseenter="showKarungTooltip(idx)"
-                  @mouseleave="hideKarungTooltip"
-                >
-                  <div class="bar-wrapper">
-                    <div
-                      class="bar"
-                      :style="{
-                        height: (item.value / maxKarung) * 100 + '%',
-                        backgroundColor: item.value > 0 ? '#21ba45' : '#e0e0e0',
-                      }"
-                    >
-                      <span v-if="item.value > 0" class="bar-value">
-                        {{ item.value }}
-                      </span>
+        <!-- Transaction Stats -->
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-md-6">
+            <q-card class="shadow-1">
+              <q-card-section>
+                <div class="text-h6 q-mb-md">Statistik Transaksi</div>
+                <div class="q-gutter-y-md">
+                  <div v-for="type in transactionTypes" :key="type.jenis" class="row items-center">
+                    <div class="col">
+                      <div class="text-weight-medium">{{ getTypeLabel(type.jenis) }}</div>
+                      <div class="text-caption text-grey-6">{{ type.count }} transaksi</div>
+                    </div>
+                    <div class="col-auto">
+                      <div class="text-h6" :class="getAmountColor(type.jenis)">
+                        {{ formatCurrency(type.total) }}
+                      </div>
                     </div>
                   </div>
-                  <div class="bar-label">{{ item.date }}</div>
                 </div>
-              </div>
+              </q-card-section>
+            </q-card>
+          </div>
 
-              <!-- Karung Tooltip -->
-              <div
-                v-if="tooltipKarungVisible"
-                class="chart-tooltip"
-                :style="{ left: tooltipKarungX + 'px', top: tooltipKarungY + 'px' }"
-              >
-                <div class="tooltip-date">{{ tooltipKarungDate }}</div>
-                <div class="tooltip-value text-weight-bold">{{ tooltipKarungValue }} karung</div>
-              </div>
-            </div>
+          <div class="col-12 col-md-6">
+            <q-card class="shadow-1">
+              <q-card-section>
+                <div class="text-h6 q-mb-md">Ringkasan Bulanan</div>
+                <div class="q-gutter-y-md">
+                  <div class="row items-center">
+                    <div class="col">
+                      <div class="text-weight-medium">Pemasukan</div>
+                      <div class="text-caption text-grey-6">Bulan {{ currentMonth }}</div>
+                    </div>
+                    <div class="col-auto">
+                      <div class="text-h6 text-green">
+                        {{ formatCurrency(dashboardData.monthly_stats?.pemasukan_bulan_ini || 0) }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row items-center">
+                    <div class="col">
+                      <div class="text-weight-medium">Pengeluaran</div>
+                      <div class="text-caption text-grey-6">Termasuk gaji</div>
+                    </div>
+                    <div class="col-auto">
+                      <div class="text-h6 text-red">
+                        {{
+                          formatCurrency(dashboardData.monthly_stats?.pengeluaran_bulan_ini || 0)
+                        }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row items-center">
+                    <div class="col">
+                      <div class="text-weight-bold">Saldo Bulan Ini</div>
+                    </div>
+                    <div class="col-auto">
+                      <div class="text-h5" :class="saldoClass">
+                        {{ formatCurrency(dashboardData.monthly_stats?.saldo_bulan_ini || 0) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </div>
+      </div>
 
-            <div class="text-caption text-grey-6 q-mt-md text-center">
-              Total karung 7 hari: {{ totalKarungMingguan }}
+      <!-- RIGHT COLUMN: Sidebar -->
+      <div class="col-12 col-lg-4">
+        <!-- Today's Schedule -->
+        <q-card class="q-mb-lg shadow-1">
+          <q-card-section>
+            <div class="text-h6">Jadwal Hari Ini</div>
+            <div class="text-caption text-grey-6">{{ currentDate }}</div>
+          </q-card-section>
+
+          <q-card-section v-if="loading" class="text-center">
+            <q-spinner size="sm" />
+          </q-card-section>
+
+          <q-card-section v-else-if="!todaySchedule.length" class="text-center text-grey-6">
+            <q-icon name="event_available" size="2em" class="q-mb-sm" />
+            <div>Tidak ada jadwal hari ini</div>
+          </q-card-section>
+
+          <q-list v-else bordered>
+            <q-item v-for="schedule in todaySchedule" :key="schedule.id" class="q-py-sm">
+              <q-item-section>
+                <q-item-label class="text-weight-medium">{{ schedule.wilayah }}</q-item-label>
+                <q-item-label caption>
+                  {{ schedule.jam_mulai }} - {{ schedule.jam_selesai }}
+                </q-item-label>
+                <q-item-label v-if="schedule.keterangan" caption class="text-grey-6">
+                  {{ schedule.keterangan }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn icon="visibility" flat round dense @click="viewScheduleDetail(schedule)" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+
+          <q-card-actions align="right">
+            <q-btn label="Lihat Semua Jadwal" color="primary" flat to="/admin/jadwal/list" />
+          </q-card-actions>
+        </q-card>
+
+        <!-- Recent Transactions -->
+        <q-card class="shadow-1">
+          <q-card-section>
+            <div class="text-h6">Transaksi Terbaru</div>
+            <div class="text-caption text-grey-6">8 transaksi terakhir</div>
+          </q-card-section>
+
+          <q-card-section v-if="loading" class="text-center">
+            <q-spinner size="sm" />
+          </q-card-section>
+
+          <q-card-section v-else-if="!recentTransactions.length" class="text-center text-grey-6">
+            <q-icon name="receipt_long" size="2em" class="q-mb-sm" />
+            <div>Belum ada transaksi</div>
+          </q-card-section>
+
+          <q-list v-else bordered>
+            <q-item v-for="transaction in recentTransactions" :key="transaction.id" class="q-py-xs">
+              <q-item-section avatar>
+                <q-icon
+                  :name="getTransactionIcon(transaction.jenis)"
+                  :color="getTransactionColor(transaction.jenis)"
+                />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-medium">
+                  {{
+                    transaction.keterangan?.substring(0, 30) || transaction.kategori || 'Transaksi'
+                  }}
+                </q-item-label>
+                <q-item-label caption>
+                  {{ transaction.waktu }} • {{ transaction.petugas || '-' }}
+                </q-item-label>
+              </q-item-section>
+
+              <q-item-section side>
+                <div :class="`text-weight-bold text-${getTransactionColor(transaction.jenis)}`">
+                  {{ formatCurrency(transaction.jumlah) }}
+                </div>
+              </q-item-section>
+            </q-item>
+          </q-list>
+
+          <q-card-actions align="right">
+            <q-btn label="Lihat Semua Transaksi" color="primary" flat to="/log-aktivitas" />
+          </q-card-actions>
+        </q-card>
+
+        <!-- Quick Actions -->
+        <q-card class="q-mt-lg shadow-1">
+          <q-card-section>
+            <div class="text-h6 q-mb-md">Aksi Cepat</div>
+            <div class="row q-col-gutter-sm">
+              <div class="col-6">
+                <q-btn
+                  color="primary"
+                  icon="add"
+                  label="Tambah Transaksi"
+                  class="full-width"
+                  to="/admin/keuangan"
+                />
+              </div>
+              <div class="col-6">
+                <q-btn
+                  color="green"
+                  icon="paid"
+                  label="Input Gaji"
+                  class="full-width"
+                  to="/admin/gaji"
+                />
+              </div>
+              <div class="col-6">
+                <q-btn
+                  color="orange"
+                  icon="event"
+                  label="Buat Jadwal"
+                  class="full-width"
+                  to="/admin/jadwal/tambah"
+                />
+              </div>
+              <div class="col-6">
+                <q-btn
+                  color="blue"
+                  icon="download"
+                  label="Export Laporan"
+                  class="full-width"
+                  @click="exportReport"
+                />
+              </div>
             </div>
           </q-card-section>
         </q-card>
       </div>
     </div>
 
-    <!-- WEEKLY SUMMARY -->
-    <q-card class="q-mb-lg">
-      <q-card-section>
-        <div class="text-subtitle1 text-weight-bold text-primary q-mb-sm">Ringkasan Mingguan</div>
-        <div class="row items-center">
-          <div class="col-md-8 col-12">
-            <div class="text-caption text-grey-7">Periode: {{ weeklyDateRange }}</div>
-          </div>
-          <div class="col-md-4 col-12 text-right">
-            <q-badge color="green" class="q-px-sm q-py-xs">
-              Saldo: Rp {{ formatCurrency(weeklySaldo) }}
-            </q-badge>
-          </div>
-        </div>
-      </q-card-section>
+    <!-- BOTTOM SECTION: Top Petugas -->
+    <div class="row q-mt-lg">
+      <div class="col-12">
+        <q-card class="shadow-1">
+          <q-card-section>
+            <div class="text-h6">Top 5 Petugas</div>
+            <div class="text-caption text-grey-6">Berdasarkan total transaksi</div>
+          </q-card-section>
 
-      <q-separator />
+          <q-card-section v-if="loading" class="text-center">
+            <q-spinner size="sm" />
+          </q-card-section>
 
-      <q-card-section>
-        <div class="row">
-          <div class="col-6 text-center">
-            <div class="text-h5 text-weight-bold text-green-8">
-              Rp {{ formatCurrency(weeklyPemasukan) }}
+          <q-card-section v-else-if="!topPetugas.length" class="text-center text-grey-6">
+            <q-icon name="people" size="2em" class="q-mb-sm" />
+            <div>Belum ada data petugas</div>
+          </q-card-section>
+
+          <div v-else class="row q-col-gutter-md">
+            <div
+              v-for="petugas in topPetugas"
+              :key="petugas.nama_lengkap"
+              class="col-12 col-sm-6 col-md-4 col-lg"
+            >
+              <q-card flat bordered class="text-center">
+                <q-card-section>
+                  <q-avatar size="60px" color="primary" text-color="white" class="q-mb-sm">
+                    {{ getInitials(petugas.nama_lengkap) }}
+                  </q-avatar>
+                  <div class="text-weight-bold">{{ petugas.nama_lengkap }}</div>
+                  <div class="text-caption text-grey-7">{{ petugas.no_telepon }}</div>
+                  <div class="text-h6 text-primary q-mt-sm">
+                    {{ formatCurrency(petugas.total_transaksi || 0) }}
+                  </div>
+                  <div class="text-caption">{{ petugas.jumlah_transaksi || 0 }} transaksi</div>
+                </q-card-section>
+              </q-card>
             </div>
-            <div class="text-caption text-grey-7">Total Pemasukan</div>
           </div>
-          <div class="col-6 text-center">
-            <div class="text-h5 text-weight-bold text-red-8">
-              Rp {{ formatCurrency(weeklyPengeluaran) }}
-            </div>
-            <div class="text-caption text-grey-7">Total Pengeluaran</div>
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
+        </q-card>
+      </div>
+    </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
+import { useQuasar } from 'quasar'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { date } from 'quasar'
+import { Chart, registerables } from 'chart.js'
 
-// Reactive state
-const today = new Date()
-const petugasCount = ref(0)
-const userCount = ref(0)
-const totalHariIni = ref(0)
-const pengambilanHariIni = ref(0)
-const pemasukanList = ref([])
-const pengeluaranList = ref([])
+Chart.register(...registerables)
+
+const $q = useQuasar()
+const router = useRouter()
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
+
+// Refs
 const loading = ref(false)
+const revenueChart = ref(null)
+let chartInstance = null
 
-// Tooltip state
-const tooltipVisible = ref(false)
-const tooltipX = ref(0)
-const tooltipY = ref(0)
-const tooltipValue = ref(0)
-const tooltipDate = ref('')
+// Data
+const stats = ref({})
+const dashboardData = ref({})
+const chartPeriod = ref('7days')
 
-const tooltipKarungVisible = ref(false)
-const tooltipKarungX = ref(0)
-const tooltipKarungY = ref(0)
-const tooltipKarungValue = ref(0)
-const tooltipKarungDate = ref('')
+// Chart options
+const chartPeriodOptions = [
+  { label: '7 Hari', value: '7days' },
+  { label: '30 Hari', value: '30days' },
+  { label: 'Bulan Ini', value: 'month' },
+]
 
-// Format helpers
-const formatCurrency = (value) => {
-  return Number(value).toLocaleString('id-ID')
+// Computed
+const welcomeMessage = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Selamat Pagi!'
+  if (hour < 18) return 'Selamat Siang!'
+  return 'Selamat Malam!'
+})
+
+const currentDate = computed(() => {
+  return new Date().toLocaleDateString('id-ID', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+})
+
+const currentMonth = computed(() => {
+  return new Date().toLocaleDateString('id-ID', { month: 'long' })
+})
+
+const todaySchedule = computed(() => {
+  return dashboardData.value.today_schedule || []
+})
+
+const recentTransactions = computed(() => {
+  return dashboardData.value.recent_transactions || []
+})
+
+const topPetugas = computed(() => {
+  return dashboardData.value.top_petugas || []
+})
+
+const transactionTypes = computed(() => {
+  return dashboardData.value.transaction_by_type || []
+})
+
+const saldoClass = computed(() => {
+  const saldo = dashboardData.value.monthly_stats?.saldo_bulan_ini || 0
+  return saldo >= 0 ? 'text-green' : 'text-red'
+})
+
+// Helper Functions
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(amount || 0)
 }
 
-const formatDateDisplay = (dateObj) => {
-  return date.formatDate(dateObj, 'DD MMM YYYY')
+const getInitials = (name) => {
+  if (!name) return '?'
+  return name
+    .split(' ')
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2)
 }
 
-// Fetch data
-const fetchData = async () => {
+const getTransactionIcon = (jenis) => {
+  const icons = {
+    pemasukan: 'arrow_upward',
+    pengeluaran: 'arrow_downward',
+    gaji: 'paid',
+    topup: 'account_balance_wallet',
+  }
+  return icons[jenis] || 'receipt'
+}
+
+const getTransactionColor = (jenis) => {
+  const colors = {
+    pemasukan: 'green',
+    pengeluaran: 'red',
+    gaji: 'orange',
+    topup: 'blue',
+  }
+  return colors[jenis] || 'grey'
+}
+
+const getTypeLabel = (jenis) => {
+  const labels = {
+    pemasukan: 'Pemasukan',
+    pengeluaran: 'Pengeluaran',
+    gaji: 'Gaji Petugas',
+    topup: 'Topup Saldo',
+  }
+  return labels[jenis] || jenis
+}
+
+const getAmountColor = (jenis) => {
+  return jenis === 'pemasukan' ? 'text-green' : 'text-red'
+}
+
+// Methods
+const loadDashboard = async () => {
   loading.value = true
   try {
-    const [petugasRes, userRes, pemasukanRes, pengeluaranRes] = await Promise.all([
-      axios.get('http://localhost:5000/api/petugas'),
-      axios.get('http://localhost:5000/api/warga'),
-      axios.get('http://localhost:5000/api/pemasukan'),
-      axios.get('http://localhost:5000/api/pengeluaran'),
-    ])
+    const token = localStorage.getItem('token')
 
-    // Process petugas data
-    petugasCount.value = petugasRes.data.data?.filter((p) => p.status === 'Aktif').length || 0
+    // Load quick stats
+    const statsRes = await axios.get(`${API_URL}/api/dashboard/quick-stats`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
 
-    // Process user data
-    userCount.value = userRes.data.data?.length || 0
+    if (statsRes.data.success) {
+      stats.value = statsRes.data.data
+    }
 
-    // Process pemasukan data
-    pemasukanList.value =
-      pemasukanRes.data.data?.map((x) => ({
-        amount: Number(x.jumlah_pembayaran) || 0,
-        karung: Number(x.jumlah_karung) || 0,
-        date: x.tanggal,
-        nama_warga: x.nama_warga || '',
-      })) || []
+    // Load full dashboard data
+    const dashboardRes = await axios.get(`${API_URL}/api/dashboard/summary`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
 
-    // Process pengeluaran data
-    pengeluaranList.value =
-      pengeluaranRes.data.data?.map((x) => ({
-        amount: Number(x.jumlah_pengeluaran) || 0,
-        date: x.tanggal,
-        nama_pengeluaran: x.nama_pengeluaran || '',
-      })) || []
-
-    // Calculate today's data
-    const todayFormatted = date.formatDate(today, 'YYYY-MM-DD')
-    const pemasukanHariIni = pemasukanList.value.filter(
-      (x) => x.date && x.date.slice(0, 10) === todayFormatted,
-    )
-
-    totalHariIni.value = pemasukanHariIni.reduce((sum, x) => sum + x.amount, 0)
-    pengambilanHariIni.value = pemasukanHariIni.length
+    if (dashboardRes.data.success) {
+      dashboardData.value = dashboardRes.data.data
+      renderChart()
+    }
   } catch (error) {
-    console.error('Dashboard fetch error:', error)
+    console.error('Error loading dashboard:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Gagal memuat dashboard',
+      caption: error.message,
+    })
   } finally {
     loading.value = false
   }
 }
 
-// Weekly data computations
-const weeklyData = computed(() => {
-  const list = []
-  for (let d = 0; d < 7; d++) {
-    const currentDate = new Date()
-    currentDate.setDate(today.getDate() - (6 - d))
-    const formattedDate = date.formatDate(currentDate, 'YYYY-MM-DD')
+const renderChart = () => {
+  if (!dashboardData.value.chart_data) return
 
-    const income = pemasukanList.value
-      .filter((i) => i.date && i.date.slice(0, 10) === formattedDate)
-      .reduce((sum, i) => sum + i.amount, 0)
-
-    const expense = pengeluaranList.value
-      .filter((i) => i.date && i.date.slice(0, 10) === formattedDate)
-      .reduce((sum, i) => sum + i.amount, 0)
-
-    list.push({
-      date: date.formatDate(currentDate, 'ddd'),
-      dateFull: date.formatDate(currentDate, 'DD MMM'),
-      value: income - expense,
-      income,
-      expense,
-    })
+  // Destroy existing chart
+  if (chartInstance) {
+    chartInstance.destroy()
   }
-  return list
-})
 
-const weeklyKarungData = computed(() => {
-  const list = []
-  for (let d = 0; d < 7; d++) {
-    const currentDate = new Date()
-    currentDate.setDate(today.getDate() - (6 - d))
-    const formattedDate = date.formatDate(currentDate, 'YYYY-MM-DD')
+  nextTick(() => {
+    if (!revenueChart.value) return
 
-    const totalKarung = pemasukanList.value
-      .filter((i) => i.date && i.date.slice(0, 10) === formattedDate)
-      .reduce((sum, i) => sum + i.karung, 0)
+    const ctx = revenueChart.value.getContext('2d')
+    const chartData = dashboardData.value.chart_data
 
-    list.push({
-      date: date.formatDate(currentDate, 'ddd'),
-      dateFull: date.formatDate(currentDate, 'DD MMM'),
-      value: totalKarung,
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartData.labels,
+        datasets: [
+          {
+            label: 'Pemasukan',
+            data: chartData.pemasukan,
+            borderColor: '#4CAF50',
+            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+          },
+          {
+            label: 'Pengeluaran',
+            data: chartData.pengeluaran,
+            borderColor: '#F44336',
+            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              padding: 20,
+              usePointStyle: true,
+            },
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: (context) => {
+                return `${context.dataset.label}: ${formatCurrency(context.raw)}`
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false,
+            },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value) => formatCurrency(value).replace('Rp', ''),
+            },
+            grid: {
+              color: 'rgba(0,0,0,0.05)',
+            },
+          },
+        },
+        interaction: {
+          intersect: false,
+          mode: 'nearest',
+        },
+      },
     })
-  }
-  return list
-})
-
-// Weekly summary computations
-const weeklyPemasukan = computed(() => {
-  return weeklyData.value.reduce((sum, item) => sum + item.income, 0)
-})
-
-const weeklyPengeluaran = computed(() => {
-  return weeklyData.value.reduce((sum, item) => sum + item.expense, 0)
-})
-
-const weeklySaldo = computed(() => {
-  return weeklyPemasukan.value - weeklyPengeluaran.value
-})
-
-const totalKarungMingguan = computed(() => {
-  return weeklyKarungData.value.reduce((sum, item) => sum + item.value, 0)
-})
-
-const weeklyDateRange = computed(() => {
-  const startDate = new Date()
-  startDate.setDate(today.getDate() - 6)
-
-  return `${date.formatDate(startDate, 'DD MMM')} - ${date.formatDate(today, 'DD MMM YYYY')}`
-})
-
-// Chart computations
-const maxKarung = computed(() => {
-  const values = weeklyKarungData.value.map((item) => item.value)
-  const max = Math.max(...values)
-  return max > 0 ? max : 1 // Prevent division by zero
-})
-
-const pointList = computed(() => {
-  if (!weeklyData.value.length) return []
-
-  const values = weeklyData.value.map((x) => x.value)
-  const max = Math.max(...values)
-  const min = Math.min(...values)
-  const range = max - min || 1
-
-  return weeklyData.value.map((item, idx) => {
-    const x = weeklyData.value.length === 1 ? 50 : (idx / (weeklyData.value.length - 1)) * 100
-    const y = 50 - ((item.value - min) / range) * 45
-
-    return {
-      x,
-      y,
-      value: item.value,
-      date: item.date,
-      dateFull: item.dateFull,
-    }
   })
-})
-
-const chartPoints = computed(() => pointList.value.map((p) => `${p.x},${p.y}`).join(' '))
-
-const areaPoints = computed(() => {
-  if (pointList.value.length === 0) return ''
-  const start = '0,50'
-  const end = '100,50'
-  return `${start} ${chartPoints.value} ${end}`
-})
-
-// Tooltip functions
-const showTooltipAt = (idx) => {
-  const p = pointList.value[idx]
-  tooltipValue.value = p.value
-  tooltipDate.value = p.dateFull
-  tooltipX.value = (p.x / 100) * 250
-  tooltipY.value = (p.y / 50) * 120 - 40
-  tooltipVisible.value = true
 }
 
-const hideTooltip = () => {
-  tooltipVisible.value = false
+const refreshDashboard = () => {
+  loadDashboard()
+  $q.notify({
+    type: 'info',
+    message: 'Memperbarui dashboard...',
+    timeout: 1000,
+  })
 }
 
-const showKarungTooltip = (idx) => {
-  const p = weeklyKarungData.value[idx]
-  tooltipKarungValue.value = p.value
-  tooltipKarungDate.value = p.dateFull
-
-  const barContainer = document.querySelectorAll('.bar-container')[idx]
-  if (barContainer) {
-    const rect = barContainer.getBoundingClientRect()
-    const containerRect = barContainer.parentElement.getBoundingClientRect()
-
-    tooltipKarungX.value = rect.left + rect.width / 2 - containerRect.left
-    tooltipKarungY.value = -20
-  }
-
-  tooltipKarungVisible.value = true
+const viewSchedule = () => {
+  router.push('')
 }
 
-const hideKarungTooltip = () => {
-  tooltipKarungVisible.value = false
+const viewScheduleDetail = (schedule) => {
+  // Implement detail view
+  $q.notify({
+    message: `Detail jadwal: ${schedule.wilayah}`,
+    caption: `${schedule.jam_mulai} - ${schedule.jam_selesai}`,
+    color: 'info',
+  })
+}
+
+const exportReport = () => {
+  $q.notify({
+    message: 'Mengekspor laporan...',
+    color: 'info',
+    icon: 'download',
+  })
+  // Implement export logic
+  window.open(`${API_URL}/api/log/export-csv`, '_blank')
+}
+
+// Auto-refresh every 60 seconds
+let refreshInterval
+const startAutoRefresh = () => {
+  refreshInterval = setInterval(() => {
+    if (!loading.value) {
+      loadDashboard()
+    }
+  }, 60000)
 }
 
 // Lifecycle
 onMounted(() => {
-  fetchData()
+  loadDashboard()
+  startAutoRefresh()
+})
+
+// Cleanup
+import { onUnmounted } from 'vue'
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
+  if (chartInstance) {
+    chartInstance.destroy()
+  }
 })
 </script>
 
 <style scoped>
-/* Base styles */
-.q-page {
-  background-color: #f8faf9 !important;
-}
-
-.text-primary {
-  color: #006837 !important;
-}
-
-/* Stat cards */
-.stat-card {
+/* Custom styles */
+.q-card {
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease;
-  padding: 12px;
+  transition: transform 0.2s ease-in-out;
 }
 
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+.q-card:hover {
+  transform: translateY(-2px);
 }
 
-/* Chart cards */
-.chart-card {
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  height: 100%;
-}
-
-.chart-container {
-  min-height: 220px;
-  position: relative;
-}
-
-.chart-wrapper {
-  width: 100%;
-  height: 150px;
-  position: relative;
-}
-
-.chart-svg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.data-point {
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.data-point:hover {
-  r: 4;
-  fill: #198c3c;
-}
-
-.chart-tooltip {
-  position: absolute;
-  background: rgba(0, 104, 55, 0.95);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translate(-50%, -100%);
-  white-space: nowrap;
-  min-width: 120px;
-  text-align: center;
-}
-
-.chart-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: rgba(0, 104, 55, 0.95);
-}
-
-.tooltip-date {
-  font-size: 11px;
-  opacity: 0.9;
-  margin-bottom: 2px;
-}
-
-.tooltip-value {
-  font-size: 14px;
-}
-
-/* Bar chart styles */
-.bar-chart-wrapper {
-  width: 100%;
-  height: 150px;
-  position: relative;
-}
-
-.chart-bar-3d {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-end;
-  padding-bottom: 25px;
-}
-
-.bar-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-  flex: 1;
-  position: relative;
-  cursor: pointer;
-}
-
-.bar-wrapper {
-  width: 100%;
-  height: calc(100% - 25px);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.bar {
-  width: 20px;
-  min-height: 4px;
-  border-radius: 4px 4px 0 0;
-  position: relative;
-  transition: all 0.3s ease;
-  background-color: #21ba45;
-}
-
-.bar:hover {
-  background-color: #198c3c !important;
-  transform: scale(1.05);
-}
-
-.bar-value {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 11px;
-  font-weight: 600;
-  color: #333;
-  white-space: nowrap;
-}
-
-.bar-label {
-  position: absolute;
-  bottom: 0;
-  font-size: 11px;
-  color: #666;
-  margin-top: 4px;
-  text-align: center;
-  width: 100%;
-}
-
-/* Weekly summary badge */
-.q-badge {
+.q-list--bordered {
   border-radius: 8px;
-  font-weight: 600;
+}
+
+.text-shadow {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-  .stat-card {
-    padding: 10px;
+@media (max-width: 600px) {
+  .text-h4 {
+    font-size: 1.5rem;
   }
 
-  .chart-container {
-    min-height: 200px;
-  }
-
-  .bar {
-    width: 16px;
-  }
-
-  .bar-value {
-    font-size: 10px;
+  .q-card-section {
+    padding: 12px;
   }
 }
 </style>

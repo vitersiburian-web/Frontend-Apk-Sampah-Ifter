@@ -1,317 +1,551 @@
 <template>
-  <q-page class="q-pa-md bg-green-1">
-    <div class="text-caption text-grey-7 q-mb-md">
-      Daftar lengkap riwayat transaksi dan aktivitas sistem.
-    </div>
-
-    <!-- Loading Indicator -->
-    <div v-if="loading" class="text-center q-py-lg">
-      <q-spinner color="primary" size="2em" />
-      <div class="text-grey-7 q-mt-sm">Memuat data...</div>
-    </div>
-
-    <div v-else>
-      <q-card flat class="q-pa-sm q-mb-md date-card" @click="showDatePicker = true">
-        <div class="row items-center justify-between cursor-pointer">
-          <div class="text-subtitle1 text-grey-8">{{ formattedDate }}</div>
-          <q-icon name="event" color="primary" size="sm" />
-        </div>
-      </q-card>
-
-      <q-dialog v-model="showDatePicker">
-        <q-date v-model="selectedDateModel" mask="DD MMM YYYY" />
-      </q-dialog>
-
-      <!-- Filter Pemasukan/Pengeluaran -->
-      <div class="q-mb-md">
-        <q-btn-toggle
-          v-model="filterType"
-          toggle-color="green-8"
-          color="white"
-          text-color="primary"
-          :options="filterOptions"
-          unelevated
-          spread
-          class="rounded-toggle-filter"
-        />
+  <q-page class="q-pa-md bg-grey-1">
+    <!-- Header -->
+    <div class="row items-center q-mb-md">
+      <div class="col">
+        <div class="text-h5 text-weight-bold">Log Aktivitas</div>
+        <div class="text-caption text-grey-7">Rekap semua transaksi dan pengambilan</div>
       </div>
-
-      <q-card flat class="q-pa-sm q-mb-lg detail-card">
-        <q-list separator>
-          <q-item-label header class="text-weight-bold text-grey-9">
-            Log {{ filterTypeLabel }} Harian ({{ filteredRiwayat.length }})
-          </q-item-label>
-
-          <q-item v-for="item in filteredRiwayat" :key="item.id" class="q-py-md riwayat-item">
-            <q-item-section avatar>
-              <q-avatar
-                :icon="getIcon(item.type)"
-                :color="getColor(item.type) + '-1'"
-                :text-color="getColor(item.type) + '-8'"
-              />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label class="text-weight-medium">{{ item.desc }}</q-item-label>
-              <q-item-label caption class="text-status">
-                <q-chip
-                  :color="item.type === 'Pemasukan' ? 'green-2' : 'red-2'"
-                  text-color="black"
-                  square
-                  dense
-                  size="xs"
-                  class="q-mr-xs"
-                >
-                  {{ item.type }}
-                </q-chip>
-                <span v-if="item.amount > 0">
-                  {{ item.type === 'Pemasukan' ? '+' : '-' }} Rp
-                  {{ item.amount.toLocaleString('id-ID') }}
-                </span>
-                <span v-if="item.jumlah_karung && item.jumlah_karung > 0" class="q-ml-xs">
-                  • {{ item.jumlah_karung }} karung
-                </span>
-              </q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <q-item-label caption class="text-right">{{ formatTime(item.date) }}</q-item-label>
-              <q-chip
-                :color="
-                  item.status === 'Completed'
-                    ? 'green'
-                    : item.status === 'Pending'
-                      ? 'orange'
-                      : 'green'
-                "
-                text-color="white"
-                square
-                dense
-                size="xs"
-                class="q-mt-xs status-chip-side"
-              >
-                {{ item.status }}
-              </q-chip>
-            </q-item-section>
-          </q-item>
-        </q-list>
-
-        <div v-if="filteredRiwayat.length === 0" class="text-center text-grey-5 q-py-lg">
-          Tidak ada {{ filterType.toLowerCase() }} pada tanggal ini.
-        </div>
-      </q-card>
+      <div class="col-auto">
+        <q-btn label="Export" color="primary" icon="download" @click="exportData" />
+      </div>
     </div>
+
+    <!-- Filter Section -->
+    <q-card class="q-mb-md">
+      <q-card-section>
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-md-3">
+            <q-select
+              v-model="filter.jenis"
+              :options="jenisOptions"
+              label="Jenis Transaksi"
+              outlined
+              clearable
+              dense
+            />
+          </div>
+          <div class="col-12 col-md-3">
+            <q-select
+              v-model="filter.kategori"
+              :options="kategoriOptions"
+              label="Kategori"
+              outlined
+              clearable
+              dense
+            />
+          </div>
+          <div class="col-12 col-md-3">
+            <q-input
+              v-model="filter.startDate"
+              label="Dari Tanggal"
+              type="date"
+              outlined
+              dense
+              clearable
+            />
+          </div>
+          <div class="col-12 col-md-3">
+            <q-input
+              v-model="filter.endDate"
+              label="Sampai Tanggal"
+              type="date"
+              outlined
+              dense
+              clearable
+            />
+          </div>
+        </div>
+        <div class="row q-mt-sm">
+          <div class="col">
+            <q-btn label="Terapkan Filter" color="primary" @click="loadAktivitas" />
+            <q-btn label="Reset" flat @click="resetFilter" class="q-ml-sm" />
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
+
+    <!-- Stats Cards -->
+    <div class="row q-col-gutter-md q-mb-md">
+      <div class="col-12 col-md-3">
+        <q-card class="bg-blue-1">
+          <q-card-section>
+            <div class="text-h6">{{ formatCurrency(stats.totalPemasukan) }}</div>
+            <div class="text-caption">Total Pemasukan</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-3">
+        <q-card class="bg-red-1">
+          <q-card-section>
+            <div class="text-h6">{{ formatCurrency(stats.totalPengeluaran) }}</div>
+            <div class="text-caption">Total Pengeluaran</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-3">
+        <q-card class="bg-green-1">
+          <q-card-section>
+            <div class="text-h6">{{ stats.totalAktivitas }}</div>
+            <div class="text-caption">Total Aktivitas</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-12 col-md-3">
+        <q-card class="bg-orange-1">
+          <q-card-section>
+            <div class="text-h6">{{ formatCurrency(stats.saldo) }}</div>
+            <div class="text-caption">Saldo</div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Chart (7 hari terakhir) -->
+    <q-card class="q-mb-md">
+      <q-card-section>
+        <div class="text-h6 q-mb-md">Trend 7 Hari Terakhir</div>
+        <div style="height: 300px">
+          <canvas ref="chartCanvas"></canvas>
+        </div>
+      </q-card-section>
+    </q-card>
+
+    <!-- Activity Table -->
+    <q-card>
+      <q-card-section>
+        <div class="row items-center q-mb-md">
+          <div class="col">
+            <div class="text-h6">Daftar Aktivitas</div>
+          </div>
+          <div class="col-auto">
+            <q-btn
+              label="Refresh"
+              icon="refresh"
+              color="secondary"
+              @click="loadAktivitas"
+              :loading="loading"
+            />
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div v-if="loading" class="text-center q-py-lg">
+          <q-spinner color="primary" size="2em" />
+          <div class="text-caption q-mt-sm">Memuat data aktivitas...</div>
+        </div>
+
+        <!-- No Data -->
+        <div v-else-if="aktivitasList.length === 0" class="text-center q-py-lg text-grey-7">
+          <q-icon name="receipt_long" size="4em" class="q-mb-sm" />
+          <div>Tidak ada data aktivitas</div>
+        </div>
+
+        <!-- Activity List -->
+        <div v-else>
+          <q-table
+            :rows="aktivitasList"
+            :columns="columns"
+            row-key="id"
+            flat
+            bordered
+            :pagination="pagination"
+          >
+            <!-- Custom Body -->
+            <template v-slot:body="props">
+              <q-tr :props="props">
+                <q-td key="waktu" :props="props">
+                  <div class="text-weight-medium">{{ props.row.waktu }}</div>
+                </q-td>
+
+                <q-td key="jenis" :props="props">
+                  <q-badge :color="props.row.color">
+                    <q-icon :name="props.row.icon" size="xs" class="q-mr-xs" />
+                    {{ props.row.jenis }}
+                  </q-badge>
+                </q-td>
+
+                <q-td key="kode" :props="props">
+                  <div>{{ props.row.kode_transaksi || '-' }}</div>
+                  <div class="text-caption text-grey-7">#{{ props.row.id }}</div>
+                </q-td>
+
+                <q-td key="keterangan" :props="props">
+                  <div>{{ props.row.keterangan || '-' }}</div>
+                  <div v-if="props.row.kategori" class="text-caption text-grey-7">
+                    {{ props.row.kategori }}
+                  </div>
+                </q-td>
+
+                <q-td key="petugas" :props="props">
+                  <div v-if="props.row.nama_petugas">
+                    {{ props.row.nama_petugas }}
+                    <div class="text-caption text-grey-7">
+                      {{ props.row.telepon_petugas || '' }}
+                    </div>
+                  </div>
+                  <div v-else class="text-grey-7">-</div>
+                </q-td>
+
+                <q-td key="jumlah" :props="props">
+                  <div class="text-weight-bold" :class="`text-${props.row.color}`">
+                    {{ props.row.jumlah_formatted }}
+                  </div>
+                  <div v-if="props.row.total_karung" class="text-caption">
+                    {{ props.row.total_karung }} karung
+                  </div>
+                </q-td>
+
+                <q-td key="status" :props="props">
+                  <q-badge :color="props.row.status_color">
+                    {{ props.row.status_bayar || 'pending' }}
+                  </q-badge>
+                  <div class="text-caption q-mt-xs">
+                    {{ props.row.metode_bayar || 'cash' }}
+                  </div>
+                </q-td>
+              </q-tr>
+            </template>
+          </q-table>
+        </div>
+      </q-card-section>
+    </q-card>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { date } from 'quasar'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useQuasar } from 'quasar'
 import axios from 'axios'
+import { Chart, registerables } from 'chart.js'
 
-const selectedDateModel = ref(date.formatDate(Date.now(), 'DD MMM YYYY'))
-const showDatePicker = ref(false)
-const filterType = ref('Semua') // Default: Semua
-const riwayatList = ref([])
+Chart.register(...registerables)
+
+const $q = useQuasar()
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
+
+// Refs
 const loading = ref(false)
+const loadingChart = ref(false)
+const aktivitasList = ref([])
+const chartCanvas = ref(null)
+let chartInstance = null
 
-// Filter options: Semua, Pemasukan, Pengeluaran
-const filterOptions = [
-  { label: 'Semua', value: 'Semua' },
-  { label: 'Pemasukan', value: 'Pemasukan' },
-  { label: 'Pengeluaran', value: 'Pengeluaran' },
-]
+const exporting = ref(false)
 
-// Label untuk header
-const filterTypeLabel = computed(() => {
-  if (filterType.value === 'Semua') return 'Transaksi'
-  return filterType.value
+// Filter
+const filter = ref({
+  jenis: null,
+  kategori: null,
+  startDate: null,
+  endDate: null,
 })
 
-// Fetch data dari API
-const fetchRiwayat = async () => {
+// Stats
+const stats = ref({
+  totalPemasukan: 0,
+  totalPengeluaran: 0,
+  totalAktivitas: 0,
+  saldo: 0,
+})
+
+// Options
+const jenisOptions = [
+  { label: 'Pemasukan', value: 'pemasukan' },
+  { label: 'Pengeluaran', value: 'pengeluaran' },
+  { label: 'Gaji', value: 'gaji' },
+  { label: 'Topup', value: 'topup' },
+]
+
+const kategoriOptions = ref([])
+
+// Table Columns
+const columns = [
+  { name: 'waktu', label: 'Waktu', align: 'left', field: 'waktu', sortable: true },
+  { name: 'jenis', label: 'Jenis', align: 'center', field: 'jenis' },
+  { name: 'kode', label: 'Kode Transaksi', align: 'left', field: 'kode_transaksi' },
+  { name: 'keterangan', label: 'Keterangan', align: 'left', field: 'keterangan' },
+  { name: 'petugas', label: 'Petugas', align: 'left', field: 'nama_petugas' },
+  { name: 'jumlah', label: 'Jumlah', align: 'right', field: 'jumlah', sortable: true },
+  { name: 'status', label: 'Status', align: 'center', field: 'status_bayar' },
+]
+
+const pagination = {
+  rowsPerPage: 20,
+}
+
+// Computed
+const filterParams = computed(() => {
+  const params = {}
+  if (filter.value.jenis) params.jenis = filter.value.jenis.value || filter.value.jenis
+  if (filter.value.kategori) params.kategori = filter.value.kategori.value || filter.value.kategori
+  if (filter.value.startDate) params.start_date = filter.value.startDate
+  if (filter.value.endDate) params.end_date = filter.value.endDate
+  return params
+})
+
+// Helper Functions
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(amount || 0)
+}
+
+// Methods
+const loadAktivitas = async () => {
   loading.value = true
   try {
-    // Coba endpoint riwayat_admin dulu
-    const response = await axios.get('http://localhost:5000/api/riwayat_admin')
-    if (response.data.success) {
-      // Filter hanya Pemasukan dan Pengeluaran, hilangkan Aktivitas
-      const filteredData = response.data.data.filter(
-        (item) => item.type === 'Pemasukan' || item.type === 'Pengeluaran',
-      )
+    const token = localStorage.getItem('token')
 
-      riwayatList.value = filteredData.map((item) => ({
-        id: item.id,
-        tanggal: new Date(item.tanggal),
-        date: item.tanggal,
-        type: item.type,
-        desc: item.description,
-        amount: item.amount || 0,
-        status: item.status || 'Completed',
-        jumlah_karung: item.jumlah_karung || 0,
-      }))
+    // Load aktivitas
+    const res = await axios.get(`${API_URL}/api/log/aktivitas`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: filterParams.value,
+    })
+
+    if (res.data.success) {
+      aktivitasList.value = res.data.data
+
+      // Calculate stats
+      calculateStats(res.data.data)
     }
+
+    // Load summary
+    await loadSummary()
+
+    // Load chart
+    await loadChart()
+
+    // Load kategori options dari data
+    extractKategoriOptions()
   } catch (error) {
-    console.error('Error fetching riwayat_admin, trying fallback...', error)
-    // Fallback ke multiple API calls
-    await fetchMultipleAPIs()
+    console.error('Error loading aktivitas:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Gagal memuat data aktivitas',
+      caption: error.message,
+    })
   } finally {
     loading.value = false
   }
 }
 
-// Fallback function jika endpoint riwayat_admin belum ada
-const fetchMultipleAPIs = async () => {
+const loadSummary = async () => {
   try {
-    const [pemasukanRes, pengeluaranRes] = await Promise.all([
-      axios.get('http://localhost:5000/api/pemasukan'),
-      axios.get('http://localhost:5000/api/pengeluaran'),
-    ])
+    const token = localStorage.getItem('token')
+    const res = await axios.get(`${API_URL}/api/log/summary`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: filterParams.value,
+    })
 
-    const allData = []
-
-    // Process pemasukan
-    if (pemasukanRes.data.success) {
-      pemasukanRes.data.data.forEach((item) => {
-        allData.push({
-          id: `pemasukan_${item.id}`,
-          tanggal: new Date(item.tanggal),
-          date: item.tanggal,
-          type: 'Pemasukan',
-          desc: `Pembayaran dari ${item.nama_warga || 'warga'} - ${item.jumlah_karung || 0} karung`,
-          amount: item.jumlah_pembayaran || 0,
-          status: 'Completed',
-          jumlah_karung: item.jumlah_karung || 0,
-        })
-      })
+    if (res.data.success) {
+      const data = res.data.data
+      if (data.totals) {
+        stats.value.totalAktivitas = data.totals.total_aktivitas || 0
+        stats.value.totalPemasukan = data.totals.total_pemasukan || 0
+        stats.value.totalPengeluaran = data.totals.total_pengeluaran || 0
+        stats.value.saldo =
+          (data.totals.total_pemasukan || 0) - (data.totals.total_pengeluaran || 0)
+      }
     }
-
-    // Process pengeluaran
-    if (pengeluaranRes.data.success) {
-      pengeluaranRes.data.data.forEach((item) => {
-        allData.push({
-          id: `pengeluaran_${item.id}`,
-          tanggal: new Date(item.tanggal),
-          date: item.tanggal,
-          type: 'Pengeluaran',
-          desc: `${item.jenis_pengeluaran || 'Pengeluaran'} - ${item.nama_pengeluaran || ''}`,
-          amount: item.jumlah_pengeluaran || 0,
-          status: 'Completed',
-          jumlah_karung: 0,
-        })
-      })
-    }
-
-    // Sort by date (newest first)
-    allData.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
-    riwayatList.value = allData
   } catch (error) {
-    console.error('Error fetching multiple APIs:', error)
+    console.error('Error loading summary:', error)
   }
 }
 
-// Format tanggal untuk display
-const formattedDate = computed(() => {
-  return selectedDateModel.value
-})
-
-// Format time dari datetime string
-const formatTime = (datetimeStr) => {
-  if (!datetimeStr) return ''
+const loadChart = async () => {
+  loadingChart.value = true
   try {
-    return date.formatDate(datetimeStr, 'HH:mm')
+    const token = localStorage.getItem('token')
+    const res = await axios.get(`${API_URL}/api/log/harian`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { days: 7 },
+    })
+
+    if (res.data.success && chartCanvas.value) {
+      renderChart(res.data.data)
+    }
   } catch (error) {
-    console.error('Error formatting time:', datetimeStr, error)
-    return ''
+    console.error('Error loading chart:', error)
+  } finally {
+    loadingChart.value = false
   }
 }
 
-// Filter riwayat berdasarkan tanggal dan type
-const filteredRiwayat = computed(() => {
-  if (!riwayatList.value.length) return []
+const renderChart = (chartData) => {
+  // Destroy existing chart
+  if (chartInstance) {
+    chartInstance.destroy()
+  }
 
-  const selectedDate = date.formatDate(selectedDateModel.value, 'YYYY-MM-DD')
+  const ctx = chartCanvas.value.getContext('2d')
 
-  return riwayatList.value.filter((item) => {
-    // Format tanggal item ke YYYY-MM-DD
-    let itemDate = ''
-    try {
-      itemDate = date.formatDate(item.tanggal, 'YYYY-MM-DD')
-    } catch (error) {
-      console.error('Error formatting date:', item.tanggal, error)
-      return false
-    }
-
-    const isDateMatch = itemDate === selectedDate
-
-    // Filter berdasarkan type
-    let isTypeMatch = true
-    if (filterType.value === 'Pemasukan') {
-      isTypeMatch = item.type === 'Pemasukan'
-    } else if (filterType.value === 'Pengeluaran') {
-      isTypeMatch = item.type === 'Pengeluaran'
-    }
-    // Jika 'Semua', tidak perlu filter type
-
-    return isDateMatch && isTypeMatch
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: chartData.datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `${context.dataset.label}: ${formatCurrency(context.raw)}`
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => formatCurrency(value),
+          },
+        },
+      },
+    },
   })
-})
-
-// Untuk icon dan color
-const getIcon = (type) => {
-  if (type === 'Pemasukan') return 'arrow_downward' // atau 'attach_money'
-  if (type === 'Pengeluaran') return 'arrow_upward' // atau 'payment'
-  return 'circle'
 }
 
-const getColor = (type) => {
-  if (type === 'Pemasukan') return 'green'
-  if (type === 'Pengeluaran') return 'red'
-  return 'grey'
+const calculateStats = (data) => {
+  let pemasukan = 0
+  let pengeluaran = 0
+
+  data.forEach((item) => {
+    if (item.jenis === 'pemasukan') {
+      pemasukan += parseFloat(item.jumlah)
+    } else if (['pengeluaran', 'gaji'].includes(item.jenis)) {
+      pengeluaran += parseFloat(item.jumlah)
+    }
+  })
+
+  stats.value.totalPemasukan = pemasukan
+  stats.value.totalPengeluaran = pengeluaran
+  stats.value.saldo = pemasukan - pengeluaran
+  stats.value.totalAktivitas = data.length
 }
 
-// Fetch data saat komponen dimount
+const extractKategoriOptions = () => {
+  const categories = new Set()
+  aktivitasList.value.forEach((item) => {
+    if (item.kategori) {
+      categories.add(item.kategori)
+    }
+  })
+
+  kategoriOptions.value = Array.from(categories).map((cat) => ({
+    label: cat,
+    value: cat,
+  }))
+}
+
+const resetFilter = () => {
+  filter.value = {
+    jenis: null,
+    kategori: null,
+    startDate: null,
+    endDate: null,
+  }
+  loadAktivitas()
+}
+
+const exportData = async () => {
+  exporting.value = true
+  try {
+    const token = localStorage.getItem('token')
+
+    // Build query params
+    const params = new URLSearchParams()
+    if (filter.value.startDate) params.append('start_date', filter.value.startDate)
+    if (filter.value.endDate) params.append('end_date', filter.value.endDate)
+    if (filter.value.jenis) params.append('jenis', filter.value.jenis.value || filter.value.jenis)
+    if (filter.value.kategori)
+      params.append('kategori', filter.value.kategori.value || filter.value.kategori)
+
+    const url = `${API_URL}/api/log/export-csv?${params.toString()}`
+
+    // Fetch dengan headers
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    // Get filename from Content-Disposition header
+    const contentDisposition = response.headers.get('content-disposition')
+    let filename = 'laporan_transaksi.csv'
+
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '')
+      }
+    }
+
+    // Convert to blob and download
+    const blob = await response.blob()
+    const blobUrl = window.URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = filename
+    link.style.display = 'none'
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    // Cleanup
+    window.URL.revokeObjectURL(blobUrl)
+
+    $q.notify({
+      type: 'positive',
+      message: `File "${filename}" berhasil didownload`,
+      timeout: 3000,
+    })
+  } catch (error) {
+    console.error('Export error:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Gagal export data',
+      caption: error.message,
+    })
+  } finally {
+    exporting.value = false
+  }
+}
+
+// Lifecycle
 onMounted(() => {
-  fetchRiwayat()
+  loadAktivitas()
 })
+
+// Watch for filter changes
+watch(
+  filterParams,
+  () => {
+    // Auto reload when filter changes (optional)
+    // loadAktivitas()
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>
-/* Style RiwayatAdmin.vue */
-.q-page {
-  background-color: #f1f8e9 !important;
-}
-.text-primary {
-  color: #006837 !important;
-}
-.date-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  background: white;
-}
-.rounded-toggle-filter {
-  border-radius: 12px;
-  border: 1px solid #006837;
-}
-.detail-card {
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-.riwayat-item {
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
-}
-.riwayat-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-.text-status {
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.status-chip-side {
-  min-width: 50px;
+.q-table th {
+  font-weight: bold;
+  background-color: #f5f5f5;
 }
 </style>

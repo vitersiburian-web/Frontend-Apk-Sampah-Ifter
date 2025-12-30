@@ -4,7 +4,10 @@
     <div class="row items-center q-mb-md">
       <div class="col">
         <div class="text-h6 text-weight-bold text-dark">Keuangan</div>
-        <div class="text-caption text-grey-7">Kelola pemasukan dan pengeluaran</div>
+        <div class="text-caption text-grey-7">
+          Kelola pemasukan dan pengeluaran |
+          <span class="text-primary">{{ petugasName }}</span>
+        </div>
       </div>
       <div class="col-auto">
         <div class="row q-gutter-sm">
@@ -151,7 +154,7 @@
                 <q-td :props="props">
                   <div class="column">
                     <div class="text-weight-medium">
-                      {{ formatDate(props.row.tanggal) }}
+                      {{ formatDateSimple(props.row.tanggal) }}
                     </div>
                     <div class="text-caption text-grey-7">
                       {{ getDayName(props.row.tanggal) }}
@@ -175,6 +178,15 @@
                   <q-badge :color="getCategoryColor(props.row.kategori)">
                     {{ props.row.kategori || '-' }}
                   </q-badge>
+                </q-td>
+              </template>
+
+              <!-- Petugas Column -->
+              <template v-slot:body-cell-petugas="props">
+                <q-td :props="props">
+                  <div class="text-caption text-grey-7">
+                    {{ props.row.petugas || 'Admin' }}
+                  </div>
                 </q-td>
               </template>
 
@@ -242,7 +254,7 @@
                 <q-td :props="props">
                   <div class="column">
                     <div class="text-weight-medium">
-                      {{ formatDate(props.row.tanggal) }}
+                      {{ formatDateSimple(props.row.tanggal) }}
                     </div>
                     <div class="text-caption text-grey-7">
                       {{ getDayName(props.row.tanggal) }}
@@ -266,6 +278,15 @@
                   <q-badge :color="getCategoryColor(props.row.kategori)">
                     {{ props.row.kategori || '-' }}
                   </q-badge>
+                </q-td>
+              </template>
+
+              <!-- Petugas Column -->
+              <template v-slot:body-cell-petugas="props">
+                <q-td :props="props">
+                  <div class="text-caption text-grey-7">
+                    {{ props.row.petugas || 'Admin' }}
+                  </div>
                 </q-td>
               </template>
 
@@ -328,6 +349,20 @@
               :pagination="{ rowsPerPage: 15 }"
               :loading="loading"
             >
+              <!-- Tanggal Column -->
+              <template v-slot:body-cell-tanggal="props">
+                <q-td :props="props">
+                  <div class="column">
+                    <div class="text-weight-medium">
+                      {{ formatDateSimple(props.row.tanggal) }}
+                    </div>
+                    <div class="text-caption text-grey-7">
+                      {{ getDayName(props.row.tanggal) }}
+                    </div>
+                  </div>
+                </q-td>
+              </template>
+
               <!-- Tipe Column -->
               <template v-slot:body-cell-tipe="props">
                 <q-td :props="props">
@@ -349,6 +384,15 @@
                   >
                     {{ props.row.tipe === 'pemasukan' ? '+' : '-' }}
                     {{ formatCurrency(props.row.jumlah) }}
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Petugas Column -->
+              <template v-slot:body-cell-petugas="props">
+                <q-td :props="props">
+                  <div class="text-caption text-grey-7">
+                    {{ props.row.petugas || 'Admin' }}
                   </div>
                 </q-td>
               </template>
@@ -379,7 +423,6 @@
               <div class="text-caption text-grey-7">Perbandingan bulan ini</div>
             </q-card-section>
             <q-card-section>
-              <!-- Placeholder untuk chart -->
               <div class="chart-placeholder">
                 <div class="text-center q-py-xl">
                   <q-icon name="bar_chart" size="3em" color="grey-4" />
@@ -396,7 +439,6 @@
               <div class="text-caption text-grey-7">Distribusi pengeluaran bulan ini</div>
             </q-card-section>
             <q-card-section>
-              <!-- Placeholder untuk pie chart -->
               <div class="chart-placeholder">
                 <div class="text-center q-py-xl">
                   <q-icon name="pie_chart" size="3em" color="grey-4" />
@@ -414,6 +456,7 @@
       <q-card style="min-width: 400px">
         <q-card-section>
           <div class="text-h6">{{ isEditPemasukan ? 'Edit Pemasukan' : 'Tambah Pemasukan' }}</div>
+          <div class="text-caption text-grey-7">Petugas: {{ petugasName }}</div>
         </q-card-section>
 
         <q-card-section class="q-pt-none">
@@ -452,6 +495,22 @@
               :rules="[(val) => !!val || 'Keterangan wajib diisi']"
             />
 
+            <div class="row q-gutter-sm">
+              <q-checkbox
+                v-model="pemasukanForm.status_bayar"
+                label="Status Lunas"
+                true-value="lunas"
+                false-value="belum"
+              />
+              <q-select
+                v-model="pemasukanForm.metode_bayar"
+                label="Metode Bayar"
+                outlined
+                dense
+                :options="metodeBayarOptions"
+              />
+            </div>
+
             <div class="row justify-end q-gutter-sm q-mt-md">
               <q-btn label="Batal" color="grey" flat v-close-popup />
               <q-btn
@@ -473,6 +532,7 @@
           <div class="text-h6">
             {{ isEditPengeluaran ? 'Edit Pengeluaran' : 'Tambah Pengeluaran' }}
           </div>
+          <div class="text-caption text-grey-7">Petugas: {{ petugasName }}</div>
         </q-card-section>
 
         <q-card-section class="q-pt-none">
@@ -511,6 +571,22 @@
               :rules="[(val) => !!val || 'Keterangan wajib diisi']"
             />
 
+            <div class="row q-gutter-sm">
+              <q-checkbox
+                v-model="pengeluaranForm.status_bayar"
+                label="Status Lunas"
+                true-value="lunas"
+                false-value="belum"
+              />
+              <q-select
+                v-model="pengeluaranForm.metode_bayar"
+                label="Metode Bayar"
+                outlined
+                dense
+                :options="metodeBayarOptions"
+              />
+            </div>
+
             <div class="row justify-end q-gutter-sm q-mt-md">
               <q-btn label="Batal" color="grey" flat v-close-popup />
               <q-btn
@@ -529,7 +605,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
+import { useQuasar, date } from 'quasar'
 import axios from 'axios'
 
 const $q = useQuasar()
@@ -544,6 +620,7 @@ const showPemasukanDialog = ref(false)
 const showPengeluaranDialog = ref(false)
 const isEditPemasukan = ref(false)
 const isEditPengeluaran = ref(false)
+const petugasName = ref('')
 
 // Data
 const pemasukanList = ref([])
@@ -564,6 +641,9 @@ const pemasukanForm = ref({
   jumlah: '',
   kategori: '',
   keterangan: '',
+  petugas: '',
+  status_bayar: 'lunas',
+  metode_bayar: 'cash',
 })
 
 const pengeluaranForm = ref({
@@ -572,6 +652,9 @@ const pengeluaranForm = ref({
   jumlah: '',
   kategori: '',
   keterangan: '',
+  petugas: '',
+  status_bayar: 'lunas',
+  metodo_bayar: 'cash',
 })
 
 // Options
@@ -606,12 +689,15 @@ const kategoriPengeluaran = [
   'Lain-lain',
 ]
 
+const metodeBayarOptions = ['cash', 'transfer', 'qris']
+
 // Columns
 const columnsPemasukan = [
   { name: 'tanggal', label: 'Tanggal', field: 'tanggal', align: 'left', sortable: true },
   { name: 'kategori', label: 'Kategori', field: 'kategori', align: 'left', sortable: true },
   { name: 'keterangan', label: 'Keterangan', field: 'keterangan', align: 'left', sortable: true },
   { name: 'jumlah', label: 'Jumlah', field: 'jumlah', align: 'right', sortable: true },
+  { name: 'petugas', label: 'Input By', field: 'petugas', align: 'left' },
   { name: 'actions', label: 'Aksi', align: 'center' },
 ]
 
@@ -620,6 +706,7 @@ const columnsPengeluaran = [
   { name: 'kategori', label: 'Kategori', field: 'kategori', align: 'left', sortable: true },
   { name: 'keterangan', label: 'Keterangan', field: 'keterangan', align: 'left', sortable: true },
   { name: 'jumlah', label: 'Jumlah', field: 'jumlah', align: 'right', sortable: true },
+  { name: 'petugas', label: 'Input By', field: 'petugas', align: 'left' },
   { name: 'actions', label: 'Aksi', align: 'center' },
 ]
 
@@ -629,6 +716,7 @@ const columnsAll = [
   { name: 'kategori', label: 'Kategori', field: 'kategori', align: 'left', sortable: true },
   { name: 'keterangan', label: 'Keterangan', field: 'keterangan', align: 'left', sortable: true },
   { name: 'jumlah', label: 'Jumlah', field: 'jumlah', align: 'right', sortable: true },
+  { name: 'petugas', label: 'Input By', field: 'petugas', align: 'left' },
 ]
 
 // Computed Properties
@@ -637,15 +725,15 @@ const filteredPemasukan = computed(() => {
 
   if (filter.value.bulan) {
     filtered = filtered.filter((item) => {
-      const date = new Date(item.tanggal)
-      return date.getMonth() + 1 === parseInt(filter.value.bulan)
+      const dateObj = new Date(item.tanggal)
+      return dateObj.getMonth() + 1 === parseInt(filter.value.bulan)
     })
   }
 
   if (filter.value.tahun) {
     filtered = filtered.filter((item) => {
-      const date = new Date(item.tanggal)
-      return date.getFullYear() === parseInt(filter.value.tahun)
+      const dateObj = new Date(item.tanggal)
+      return dateObj.getFullYear() === parseInt(filter.value.tahun)
     })
   }
 
@@ -666,15 +754,15 @@ const filteredPengeluaran = computed(() => {
 
   if (filter.value.bulan) {
     filtered = filtered.filter((item) => {
-      const date = new Date(item.tanggal)
-      return date.getMonth() + 1 === parseInt(filter.value.bulan)
+      const dateObj = new Date(item.tanggal)
+      return dateObj.getMonth() + 1 === parseInt(filter.value.bulan)
     })
   }
 
   if (filter.value.tahun) {
     filtered = filtered.filter((item) => {
-      const date = new Date(item.tanggal)
-      return date.getFullYear() === parseInt(filter.value.tahun)
+      const dateObj = new Date(item.tanggal)
+      return dateObj.getFullYear() === parseInt(filter.value.tahun)
     })
   }
 
@@ -698,7 +786,7 @@ const allTransactions = computed(() => {
 
   const pengeluaran = filteredPengeluaran.value.map((item) => ({
     ...item,
-    tipe: 'pengeluaran',
+    tipe: item.kategori === 'Gaji Petugas' ? 'gaji' : 'pengeluaran',
   }))
 
   return [...pemasukan, ...pengeluaran].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
@@ -720,33 +808,26 @@ const rataPengeluaran = computed(() => {
 })
 
 // Helper Functions
-// Helper Functions
-// Helper Functions - versi lebih robust
-const formatDate = (dateString) => {
+
+const formatDateSimple = (dateString) => {
   if (!dateString) return '-'
 
   try {
-    // Split tanggal dari backend "2025-12-28"
-    const [year, month, day] = dateString.split('-').map(Number)
-
-    // Buat Date object dengan waktu set ke tengah hari untuk hindari timezone issues
-    const date = new Date(year, month - 1, day, 12, 0, 0)
-
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
-  } catch (error) {
-    console.error('Error formatting date:', dateString, error)
-    // Jika gagal, coba format manual
-    if (dateString.includes('-')) {
-      const parts = dateString.split('-')
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`
-      }
+    return date.formatDate(dateString, 'DD/MM')
+  } catch {
+    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [month, day] = dateString.split('-')
+      return `${day}/${month}`
     }
-    return dateString
+
+    const d = new Date(dateString)
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0')
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      return `${day}/${month}`
+    }
+
+    return dateString || '-'
   }
 }
 
@@ -754,16 +835,15 @@ const getDayName = (dateString) => {
   if (!dateString) return ''
 
   try {
-    // Split tanggal dari backend "2025-12-28"
-    const [year, month, day] = dateString.split('-').map(Number)
-
-    // Buat Date object
-    const date = new Date(year, month - 1, day)
-
-    return date.toLocaleDateString('id-ID', { weekday: 'long' })
-  } catch (error) {
-    console.error('Error getting day name:', dateString, error)
-    return ''
+    return date.formatDate(dateString, 'dddd')
+  } catch {
+    try {
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+      const d = new Date(dateString)
+      return days[d.getDay()]
+    } catch {
+      return ''
+    }
   }
 }
 
@@ -795,37 +875,29 @@ const loadData = async () => {
   loading.value = true
   try {
     const token = localStorage.getItem('token')
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    petugasName.value = user.username || user.name || 'Admin'
 
     // Load pemasukan
-    const pemasukanRes = await axios.get(`${API_URL}/api/pemasukan`, {
+    const pemasukanRes = await axios.get(`${API_URL}/api/keuangan/pemasukan`, {
       headers: { Authorization: `Bearer ${token}` },
     })
 
-    console.log('Raw pemasukan data:', pemasukanRes.data.data)
+    console.log('✅ Pemasukan data:', pemasukanRes.data.data)
 
     if (pemasukanRes.data.success) {
-      // Normalize tanggal
-      pemasukanList.value = pemasukanRes.data.data.map((item) => ({
-        ...item,
-        tanggal: normalizeDate(item.tanggal),
-      }))
-      console.log('Normalized pemasukan:', pemasukanList.value)
+      pemasukanList.value = pemasukanRes.data.data
     }
 
     // Load pengeluaran
-    const pengeluaranRes = await axios.get(`${API_URL}/api/pengeluaran`, {
+    const pengeluaranRes = await axios.get(`${API_URL}/api/keuangan/pengeluaran`, {
       headers: { Authorization: `Bearer ${token}` },
     })
 
-    console.log('Raw pengeluaran data:', pengeluaranRes.data.data)
+    console.log('✅ Pengeluaran data:', pengeluaranRes.data.data)
 
     if (pengeluaranRes.data.success) {
-      // Normalize tanggal
-      pengeluaranList.value = pengeluaranRes.data.data.map((item) => ({
-        ...item,
-        tanggal: normalizeDate(item.tanggal),
-      }))
-      console.log('Normalized pengeluaran:', pengeluaranList.value)
+      pengeluaranList.value = pengeluaranRes.data.data
     }
   } catch (error) {
     console.error('Error loading data:', error)
@@ -839,65 +911,58 @@ const loadData = async () => {
   }
 }
 
-// Fungsi untuk normalize tanggal
-const normalizeDate = (dateString) => {
-  if (!dateString) return ''
-
-  // Jika mengandung %, ganti dengan angka
-  if (dateString.includes('%')) {
-    // Contoh: "%Y-%m-%d" -> "2025-12-28"
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
-
-    // Replace placeholder
-    let result = dateString
-    result = result.replace(/%Y/g, year.toString())
-    result = result.replace(/%m/g, month)
-    result = result.replace(/%d/g, day)
-    result = result.replace(/%/g, '') // Hapus % yang tersisa
-
-    return result
-  }
-
-  return dateString
-}
-
-// Helper functions yang lebih sederhana sekarang
-
 const showAddPemasukan = () => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+
   pemasukanForm.value = {
     id: null,
     tanggal: new Date().toISOString().split('T')[0],
     jumlah: '',
     kategori: '',
     keterangan: '',
+    petugas: user.username || user.name || 'Admin',
+    status_bayar: 'lunas',
+    metode_bayar: 'cash',
   }
   isEditPemasukan.value = false
   showPemasukanDialog.value = true
 }
 
 const showAddPengeluaran = () => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+
   pengeluaranForm.value = {
     id: null,
     tanggal: new Date().toISOString().split('T')[0],
     jumlah: '',
     kategori: '',
     keterangan: '',
+    petugas: user.username || user.name || 'Admin',
+    status_bayar: 'lunas',
+    metode_bayar: 'cash',
   }
   isEditPengeluaran.value = false
   showPengeluaranDialog.value = true
 }
 
 const editPemasukan = (item) => {
-  pemasukanForm.value = { ...item }
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+  pemasukanForm.value = {
+    ...item,
+    petugas: user.username || user.name || 'Admin',
+  }
   isEditPemasukan.value = true
   showPemasukanDialog.value = true
 }
 
 const editPengeluaran = (item) => {
-  pengeluaranForm.value = { ...item }
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+  pengeluaranForm.value = {
+    ...item,
+    petugas: user.username || user.name || 'Admin',
+  }
   isEditPengeluaran.value = true
   showPengeluaranDialog.value = true
 }
@@ -906,15 +971,24 @@ const savePemasukan = async () => {
   saving.value = true
   try {
     const token = localStorage.getItem('token')
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+    const dataToSend = {
+      ...pemasukanForm.value,
+      petugas: user.username || user.name || 'Admin',
+    }
+
     const method = isEditPemasukan.value ? 'PUT' : 'POST'
     const url = isEditPemasukan.value
-      ? `${API_URL}/api/pemasukan/${pemasukanForm.value.id}`
-      : `${API_URL}/api/pemasukan`
+      ? `${API_URL}/api/keuangan/pemasukan/${dataToSend.id}`
+      : `${API_URL}/api/keuangan/pemasukan`
+
+    console.log('📤 Sending pemasukan data:', dataToSend)
 
     const response = await axios({
       method,
       url,
-      data: pemasukanForm.value,
+      data: dataToSend,
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -949,15 +1023,24 @@ const savePengeluaran = async () => {
   saving.value = true
   try {
     const token = localStorage.getItem('token')
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+    const dataToSend = {
+      ...pengeluaranForm.value,
+      petugas: user.username || user.name || 'Admin',
+    }
+
     const method = isEditPengeluaran.value ? 'PUT' : 'POST'
     const url = isEditPengeluaran.value
-      ? `${API_URL}/api/pengeluaran/${pengeluaranForm.value.id}`
-      : `${API_URL}/api/pengeluaran`
+      ? `${API_URL}/api/keuangan/pengeluaran/${dataToSend.id}`
+      : `${API_URL}/api/keuangan/pengeluaran`
+
+    console.log('📤 Sending pengeluaran data:', dataToSend)
 
     const response = await axios({
       method,
       url,
-      data: pengeluaranForm.value,
+      data: dataToSend,
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -998,17 +1081,18 @@ const deletePemasukan = async (id, keterangan) => {
   }).onOk(async () => {
     try {
       const token = localStorage.getItem('token')
-      await axios.delete(`${API_URL}/api/pemasukan/${id}`, {
+      const response = await axios.delete(`${API_URL}/api/keuangan/pemasukan/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
 
-      $q.notify({
-        type: 'positive',
-        message: 'Pemasukan berhasil dihapus',
-        position: 'top',
-      })
-
-      await loadData()
+      if (response.data.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Pemasukan berhasil dihapus',
+          position: 'top',
+        })
+        await loadData()
+      }
     } catch (error) {
       console.error('Error deleting pemasukan:', error)
       $q.notify({
@@ -1030,17 +1114,18 @@ const deletePengeluaran = async (id, keterangan) => {
   }).onOk(async () => {
     try {
       const token = localStorage.getItem('token')
-      await axios.delete(`${API_URL}/api/pengeluaran/${id}`, {
+      const response = await axios.delete(`${API_URL}/api/keuangan/pengeluaran/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
 
-      $q.notify({
-        type: 'positive',
-        message: 'Pengeluaran berhasil dihapus',
-        position: 'top',
-      })
-
-      await loadData()
+      if (response.data.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Pengeluaran berhasil dihapus',
+          position: 'top',
+        })
+        await loadData()
+      }
     } catch (error) {
       console.error('Error deleting pengeluaran:', error)
       $q.notify({
@@ -1054,6 +1139,9 @@ const deletePengeluaran = async (id, keterangan) => {
 
 // Lifecycle
 onMounted(() => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  petugasName.value = user.username || user.name || 'Admin'
+
   loadData()
 })
 </script>
