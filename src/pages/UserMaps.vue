@@ -1,9 +1,6 @@
 <template>
   <q-page class="full-height q-pa-none">
     <!-- Header Title -->
-    <div class="header-container absolute-top q-pa-md">
-      <div class="text-h5 text-weight-bold text-primary">Maps</div>
-    </div>
 
     <!-- Map Container -->
     <div class="map-container">
@@ -310,13 +307,6 @@ export default {
 </script>
 
 <style scoped>
-.header-container {
-  backdrop-filter: blur(1px);
-  z-index: 1001;
-  border-bottom: 1px solid rgba(8, 96, 46, 0.1);
-  height: 56px;
-}
-
 .text-primary {
   color: #08602e !important;
 }
@@ -324,7 +314,6 @@ export default {
 .map-container {
   position: relative;
   height: calc(100vh - 56px);
-  margin-top: 56px;
 }
 
 #map {

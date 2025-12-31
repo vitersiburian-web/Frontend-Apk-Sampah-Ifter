@@ -3,84 +3,12 @@
     <!-- Header dengan background gradient -->
     <div class="header-gradient q-pa-md q-pb-lg">
       <div class="row items-center q-mb-md">
-        <div class="col">
-          <q-btn
-            flat
-            round
-            icon="arrow_back"
-            color="white"
-            @click="$router.go(-1)"
-            class="q-mr-sm"
-          />
-        </div>
-        <div class="col-auto">
-          <q-btn
-            flat
-            round
-            icon="download"
-            color="white"
-            @click="exportDialog = true"
-            :loading="exporting"
-          />
-        </div>
       </div>
 
       <div class="q-mb-lg">
         <div class="text-h4 text-weight-bold text-white">Riwayat & Laporan</div>
         <div class="text-subtitle1 text-white text-opacity-80">
           Monitor semua aktivitas sampah Anda
-        </div>
-      </div>
-
-      <!-- Stats Cards -->
-      <div class="row q-col-gutter-sm q-mb-md">
-        <div class="col-12 col-sm-4">
-          <q-card class="stats-card bg-white text-dark" flat>
-            <q-card-section class="q-pa-sm text-center">
-              <div class="text-h5 text-weight-bold text-primary">{{ stats.laporan.total }}</div>
-              <div class="text-caption text-grey-7">Total Laporan</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-12 col-sm-4">
-          <q-card class="stats-card bg-white text-dark" flat>
-            <q-card-section class="q-pa-sm text-center">
-              <div class="text-h5 text-weight-bold text-positive">{{ stats.laporan.menunggu }}</div>
-              <div class="text-caption text-grey-7">Menunggu</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-12 col-sm-4">
-          <q-card class="stats-card bg-white text-dark" flat>
-            <q-card-section class="q-pa-sm text-center">
-              <div class="text-h5 text-weight-bold text-orange">{{ stats.laporan.diproses }}</div>
-              <div class="text-caption text-grey-7">Diproses</div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
-
-      <!-- Transaction Stats -->
-      <div class="row q-col-gutter-sm">
-        <div class="col-12 col-sm-6">
-          <q-card class="stats-card bg-white text-dark" flat>
-            <q-card-section class="q-pa-sm text-center">
-              <div class="text-h5 text-weight-bold text-green">
-                Rp {{ formatCurrency(stats.transaksi.pemasukan) }}
-              </div>
-              <div class="text-caption text-grey-7">Total Pemasukan</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-12 col-sm-6">
-          <q-card class="stats-card bg-white text-dark" flat>
-            <q-card-section class="q-pa-sm text-center">
-              <div class="text-h5 text-weight-bold text-red">
-                Rp {{ formatCurrency(stats.transaksi.pengeluaran) }}
-              </div>
-              <div class="text-caption text-grey-7">Total Pengeluaran</div>
-            </q-card-section>
-          </q-card>
         </div>
       </div>
     </div>
