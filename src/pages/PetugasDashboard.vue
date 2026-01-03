@@ -149,7 +149,7 @@
 import { useRouter } from 'vue-router'
 import { ref, computed, onMounted } from 'vue'
 import { date, useQuasar } from 'quasar'
-import { api } from 'src/services/api'
+import api from 'src/services/api'
 
 const $q = useQuasar()
 const router = useRouter()
