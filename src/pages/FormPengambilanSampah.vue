@@ -1,614 +1,496 @@
 <template>
-  <q-page class="q-pa-md bg-green-1">
-    <!-- Header berdasarkan jenis operasi -->
-    <div class="q-mb-md">
-      <div class="text-h6 text-weight-bold text-primary">
-        <q-icon :name="headerIcon" size="md" class="q-mr-sm" :color="headerColor" />
-        {{ headerTitle }}
-      </div>
-      <div class="text-caption text-grey-7">
-        {{ headerSubtitle }}
-      </div>
+  <q-page class="q-pa-md">
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center q-pa-xl">
+      <q-spinner color="primary" size="3em" />
+      <div class="text-caption text-grey-7 q-mt-md">Memuat data...</div>
     </div>
 
-    <q-card flat class="rounded-borders q-mb-xl q-pa-md card-form">
-      <!-- Informasi Operasi -->
-      <div class="q-mb-lg info-section">
-        <div class="row items-center q-mb-sm">
-          <q-icon name="info" color="info" size="sm" class="q-mr-xs" />
-          <span class="text-caption text-grey-7">Informasi Operasi</span>
-        </div>
-
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="text-caption text-grey-7">Jenis Operasi</div>
-            <div class="text-body2 text-weight-medium">{{ operationTypeLabel }}</div>
-          </div>
-
-          <div class="info-item" v-if="wilayah">
-            <div class="text-caption text-grey-7">Wilayah</div>
-            <div class="text-body2 text-weight-medium">{{ wilayah }}</div>
-          </div>
-
-          <div class="info-item">
-            <div class="text-caption text-grey-7">Tanggal</div>
-            <div class="text-body2 text-weight-medium">{{ selectedDateLabel }}</div>
-          </div>
-
-          <div class="info-item" v-if="namaPelanggan">
-            <div class="text-caption text-grey-7">Pelanggan</div>
-            <div class="text-body2 text-weight-medium">{{ namaPelanggan }}</div>
-          </div>
+    <!-- Form Container -->
+    <div v-else class="max-width-lg q-mx-auto">
+      <!-- Header -->
+      <div class="text-center q-mb-lg">
+        <div class="text-h5 text-weight-bold text-primary">Form Pengambilan Sampah</div>
+        <div class="text-caption text-grey-7">
+          {{ formTitle }}
         </div>
       </div>
 
-      <!-- Form Input Data Sampah -->
-      <div class="form-section">
-        <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-sm">Data Sampah</div>
+      <!-- Form Card -->
+      <q-card flat class="rounded-borders q-mb-md">
+        <q-card-section>
+          <!-- Informasi Laporan -->
+          <div v-if="laporanData" class="q-mb-lg">
+            <div class="text-subtitle1 text-weight-bold q-mb-sm">Informasi Laporan</div>
+            <q-list separator dense class="bg-grey-1 rounded-borders q-pa-sm">
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Nama Pemohon</q-item-label>
+                  <q-item-label class="text-weight-medium">{{
+                    laporanData.nama_pemohon || laporanData.nama_warga
+                  }}</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Alamat</q-item-label>
+                  <q-item-label class="text-weight-medium">{{
+                    laporanData.alamat_detail
+                  }}</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-item>
+                <q-item-section>
+                  <q-item-label caption>Jenis Sampah</q-item-label>
+                  <q-item-label class="text-weight-medium">{{
+                    laporanData.jenis_sampah
+                  }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
 
-        <!-- Jenis Sampah (hanya untuk patroli dan manual) -->
-        <q-select
-          v-if="operationType !== 'laporan'"
-          outlined
-          v-model="form.jenisSampah"
-          :options="jenisSampahOptions"
-          label="Jenis Sampah"
-          class="q-mb-md input-field"
-          :rules="[(val) => !!val || 'Pilih jenis sampah']"
-        />
-
-        <!-- Jumlah Karung -->
-        <div class="q-mb-md">
-          <div class="row items-center justify-between q-mb-xs">
-            <label class="text-caption text-grey-7">Jumlah Karung</label>
-            <div class="text-caption text-blue">
-              Harga per karung: {{ formatCurrency(pricePerBag) }}
+          <!-- Form Input -->
+          <q-form @submit="submitForm">
+            <!-- Jumlah Karung -->
+            <div class="q-mb-md">
+              <q-input
+                v-model="formData.total_karung"
+                label="Jumlah Karung *"
+                type="number"
+                min="1"
+                max="100"
+                filled
+                :rules="[(val) => val > 0 || 'Jumlah karung harus lebih dari 0']"
+              >
+                <template v-slot:append>
+                  <span class="text-caption text-grey-7">karung</span>
+                </template>
+              </q-input>
             </div>
-          </div>
-          <q-input
-            outlined
-            v-model.number="form.jumlahKarung"
-            type="number"
-            min="1"
-            class="input-field"
-            placeholder="Masukkan jumlah karung"
-            :rules="[(val) => val > 0 || 'Minimal 1 karung']"
-          >
-            <template v-slot:append>
-              <q-btn
-                flat
-                dense
-                icon="remove"
-                @click="form.jumlahKarung > 1 ? form.jumlahKarung-- : null"
+
+            <!-- Harga per Karung -->
+            <div class="q-mb-md">
+              <q-input
+                v-model="formData.harga_per_karung"
+                label="Harga per Karung *"
+                type="number"
+                min="1000"
+                max="100000"
+                filled
+                prefix="Rp"
+                :rules="[(val) => val >= 1000 || 'Harga minimal Rp 1.000']"
+              >
+                <template v-slot:after>
+                  <q-btn
+                    flat
+                    dense
+                    label="Standar"
+                    color="primary"
+                    @click="setHargaStandar"
+                    size="sm"
+                  />
+                </template>
+              </q-input>
+              <div class="text-caption text-grey-7 q-mt-xs">Harga standar: Rp 5.000 per karung</div>
+            </div>
+
+            <!-- Total Pembayaran -->
+            <div class="q-mb-md">
+              <q-input
+                :model-value="totalPembayaran"
+                label="Total Pembayaran"
+                type="text"
+                filled
+                readonly
+                prefix="Rp"
+                class="bg-green-1"
+              >
+                <template v-slot:after>
+                  <div class="text-h6 text-green-8 text-weight-bold">
+                    {{ formatCurrency(totalPembayaran) }}
+                  </div>
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Metode Pembayaran -->
+            <div class="q-mb-md">
+              <q-select
+                v-model="formData.metode_bayar"
+                label="Metode Pembayaran *"
+                :options="metodeBayarOptions"
+                filled
+                :rules="[(val) => !!val || 'Pilih metode pembayaran']"
               />
-              <q-btn flat dense icon="add" @click="form.jumlahKarung++" />
-            </template>
-          </q-input>
-        </div>
+            </div>
 
-        <!-- Keterangan (opsional) -->
-        <q-input
-          outlined
-          v-model="form.keterangan"
-          label="Keterangan (opsional)"
-          type="textarea"
-          rows="2"
-          class="q-mb-md input-field"
-          placeholder="Contoh: Sampah organik dari warung, sampah plastik dari rumah makan..."
-        />
+            <!-- Status Pembayaran -->
+            <div class="q-mb-md">
+              <q-select
+                v-model="formData.status_bayar"
+                label="Status Pembayaran *"
+                :options="statusBayarOptions"
+                filled
+                :rules="[(val) => !!val || 'Pilih status pembayaran']"
+              />
+            </div>
 
-        <!-- Total Harga -->
-        <div class="q-mb-lg">
-          <q-input
-            outlined
-            v-model="formattedTotalHarga"
-            label="Total Harga"
-            readonly
-            prefix="Rp."
-            class="input-field"
-          />
-          <div v-if="operationType !== 'laporan'" class="text-caption text-grey-7 q-mt-xs">
-            *Biaya akan dicatat untuk laporan keuangan
-          </div>
-        </div>
+            <!-- Keterangan -->
+            <div class="q-mb-lg">
+              <q-input
+                v-model="formData.keterangan"
+                label="Keterangan"
+                type="textarea"
+                filled
+                rows="3"
+                placeholder="Tambahkan keterangan jika perlu..."
+              />
+            </div>
 
-        <!-- Metode Pembayaran -->
-        <div v-if="operationType === 'laporan'" class="q-mb-lg">
-          <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-sm">Metode Pembayaran</div>
-          <q-option-group
-            v-model="form.metodePembayaran"
-            :options="paymentOptions"
-            color="primary"
-            type="radio"
-            class="payment-group"
-          />
-        </div>
-      </div>
-
-      <!-- Tombol Aksi -->
-      <div class="action-buttons">
-        <q-btn
-          :label="submitButtonLabel"
-          :color="submitButtonColor"
-          unelevated
-          class="full-width text-weight-bold"
-          size="lg"
-          @click="handleSubmit"
-          :loading="loading"
-          :disable="loading"
-        />
-
-        <q-btn label="Batal" flat color="grey" class="full-width q-mt-sm" @click="goBack" />
-      </div>
-    </q-card>
-
-    <!-- Modal QRIS untuk pembayaran -->
-    <q-dialog v-model="showQrisModal">
-      <q-card class="qris-modal">
-        <q-card-section class="text-center">
-          <div class="text-h6 text-weight-bold text-primary q-mb-sm">Pembayaran QRIS</div>
-          <div class="text-body2 text-grey-7 q-mb-md">
-            Scan QR code untuk membayar sebesar:<br />
-            <span class="text-h6 text-weight-bold text-green">{{ formattedTotalHarga }}</span>
-          </div>
-
-          <!-- QR Code Placeholder -->
-          <div class="qrcode-placeholder q-mb-md">
-            <q-icon name="qr_code" size="120px" color="grey-6" />
-            <div class="text-caption text-grey-6 q-mt-sm">QR Code akan tampil di sini</div>
-          </div>
-
-          <div class="text-caption text-grey-7">
-            Pembayaran akan otomatis terverifikasi setelah 1-2 menit
-          </div>
+            <!-- Tombol Aksi -->
+            <div class="row q-col-gutter-sm">
+              <div class="col-6">
+                <q-btn label="Batal" color="grey" unelevated class="full-width" @click="goBack" />
+              </div>
+              <div class="col-6">
+                <q-btn
+                  label="Simpan"
+                  color="primary"
+                  unelevated
+                  class="full-width"
+                  type="submit"
+                  :loading="submitting"
+                />
+              </div>
+            </div>
+          </q-form>
         </q-card-section>
-
-        <q-card-actions align="center" class="q-pb-md">
-          <q-btn
-            label="Sudah Bayar"
-            color="primary"
-            @click="confirmQrisPayment"
-            :loading="loading"
-          />
-          <q-btn label="Batal" flat color="grey" v-close-popup />
-        </q-card-actions>
       </q-card>
-    </q-dialog>
+    </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useQuasar, date } from 'quasar'
-import { api } from 'src/services/api'
+import { ref, computed, onMounted, watch } from 'vue'
+import { date, useQuasar } from 'quasar'
+import api from 'src/services/api'
 
 const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
 
-// State
-const loading = ref(false)
-const showQrisModal = ref(false)
-const petugasId = ref(null)
+// Data
+const loading = ref(true)
+const submitting = ref(false)
 const laporanData = ref(null)
+const formType = ref('') // 'laporan', 'patroli', 'manual'
 
-// Token
-const token = localStorage.getItem('token')
-
-// Determine operation type from route
-const operationType = computed(() => {
-  if (route.query.type === 'patroli') return 'patroli'
-  if (route.query.type === 'manual') return 'manual'
-  return 'laporan' // default
-})
-
-// Data dari route query
-const wilayah = route.query.wilayah || ''
-const laporanId = route.query.laporan_id
-const selectedDate = ref(route.query.date || date.formatDate(new Date(), 'YYYY-MM-DD'))
-
-// Form data
-const form = ref({
-  jenisSampah: 'Campuran',
-  jumlahKarung: 1,
+// Form Data
+const formData = ref({
+  laporan_id: null,
+  total_karung: 1,
+  harga_per_karung: 5000,
+  metode_bayar: 'cash',
+  status_bayar: 'lunas',
   keterangan: '',
-  metodePembayaran: 'cash',
+  jenis: 'pemasukan',
+  kategori: 'Pengambilan Sampah',
 })
 
-// Constants
-const pricePerBag = 5000
-const jenisSampahOptions = [
-  'Organik',
-  'Anorganik',
-  'Plastik',
-  'Kertas',
-  'Logam',
-  'Kaca',
-  'B3 (Bahan Berbahaya)',
-  'Campuran',
-  'Elektronik',
-]
-
-const paymentOptions = [
+// Options
+const metodeBayarOptions = [
   { label: 'Cash', value: 'cash' },
   { label: 'QRIS', value: 'qris' },
+  { label: 'Transfer', value: 'transfer' },
+  { label: 'Saldo', value: 'saldo' },
 ]
 
-// Computed Properties
-const headerTitle = computed(() => {
-  switch (operationType.value) {
-    case 'patroli':
-      return 'Patroli Pengambilan Sampah'
-    case 'manual':
-      return 'Laporan Pengambilan Manual'
-    default:
-      return 'Form Pengambilan Sampah'
-  }
+const statusBayarOptions = [
+  { label: 'Lunas', value: 'lunas' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Gagal', value: 'gagal' },
+]
+
+// Computed
+const formTitle = computed(() => {
+  if (formType.value === 'laporan') return 'Pengambilan dari Laporan'
+  if (formType.value === 'patroli') return 'Pengambilan Patroli Rutin'
+  if (formType.value === 'manual') return 'Tambah Laporan Manual'
+  return 'Form Pengambilan'
 })
 
-const headerSubtitle = computed(() => {
-  switch (operationType.value) {
-    case 'patroli':
-      return 'Mencatat pengambilan sampah selama patroli rutin'
-    case 'manual':
-      return 'Menambahkan data pengambilan sampah yang tidak dilaporkan'
-    default:
-      return 'Konfirmasi pengambilan sampah berdasarkan laporan'
-  }
+const totalPembayaran = computed(() => {
+  return formData.value.total_karung * formData.value.harga_per_karung
 })
 
-const headerIcon = computed(() => {
-  switch (operationType.value) {
-    case 'patroli':
-      return 'explore'
-    case 'manual':
-      return 'add_circle'
-    default:
-      return 'recycling'
-  }
-})
-
-const headerColor = computed(() => {
-  switch (operationType.value) {
-    case 'patroli':
-      return 'blue'
-    case 'manual':
-      return 'orange'
-    default:
-      return 'primary'
-  }
-})
-
-const operationTypeLabel = computed(() => {
-  switch (operationType.value) {
-    case 'patroli':
-      return 'Patroli Rutin'
-    case 'manual':
-      return 'Laporan Manual'
-    default:
-      return 'Pengambilan dari Laporan'
-  }
-})
-
-const namaPelanggan = computed(() => {
-  return laporanData.value?.nama_warga || ''
-})
-
-const selectedDateLabel = computed(() => {
-  return date.formatDate(selectedDate.value, 'dddd, D MMMM YYYY')
-})
-
-const totalHarga = computed(() => {
-  return form.value.jumlahKarung * pricePerBag
-})
-
-const formattedTotalHarga = computed(() => {
-  return formatCurrency(totalHarga.value)
-})
-
-const submitButtonLabel = computed(() => {
-  if (operationType.value === 'patroli') return 'Simpan Hasil Patroli'
-  if (operationType.value === 'manual') return 'Simpan Laporan Manual'
-  return 'Konfirmasi Pengambilan'
-})
-
-const submitButtonColor = computed(() => {
-  switch (operationType.value) {
-    case 'patroli':
-      return 'blue'
-    case 'manual':
-      return 'orange'
-    default:
-      return 'yellow-8'
-  }
-})
-
-// Helper Functions
+// Functions
 const formatCurrency = (amount) => {
-  return 'Rp ' + amount.toLocaleString('id-ID')
+  return new Intl.NumberFormat('id-ID').format(amount)
+}
+
+const setHargaStandar = () => {
+  formData.value.harga_per_karung = 5000
 }
 
 const goBack = () => {
-  router.push({ name: 'PetugasDashboard' })
+  router.go(-1)
 }
 
-const parseJwt = (tokenStr) => {
+// Load laporan data jika dari laporan
+// Load laporan data jika dari laporan
+const loadLaporanData = async (laporanId) => {
   try {
-    const base64Url = tokenStr.split('.')[1]
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    )
-    return JSON.parse(jsonPayload)
-  } catch {
-    return null
-  }
-}
+    console.log('📋 Loading laporan data ID:', laporanId)
 
-// Load petugas ID
-const loadPetugasId = async () => {
-  if (!token) {
-    $q.notify({ color: 'negative', message: 'Token tidak ditemukan. Silakan login ulang.' })
-    router.push({ name: 'LoginPage' })
-    throw new Error('Token missing')
-  }
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw new Error('Token tidak ditemukan')
+    }
 
-  const payload = parseJwt(token)
-  const userId =
-    payload?.user_id ||
-    payload?.id ||
-    payload?.userId ||
-    payload?.sub ||
-    payload?.uid ||
-    payload?.id_user
+    // Coba endpoint yang berbeda
+    let laporanDetail = null
 
-  if (!userId) {
-    $q.notify({ color: 'negative', message: 'Token tidak valid. Silakan login ulang.' })
-    router.push({ name: 'LoginPage' })
-    throw new Error('Token invalid')
-  }
+    try {
+      // Coba endpoint /laporan/{id} dulu
+      console.log('🔍 Trying endpoint: /api/laporan/' + laporanId)
+      const response = await api.get(`/api/laporan/${laporanId}`, {
+        headers: { Authorization: token },
+      })
 
-  const res = await api.get(`/api/petugas/by-user/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+      console.log('📋 Response from /laporan/{id}:', response.data)
 
-  if (!res?.data?.success || !res?.data?.data?.id) {
-    throw new Error('Petugas tidak ditemukan')
-  }
+      if (response.data.success) {
+        laporanDetail = response.data.data
+      } else {
+        console.log('❌ Endpoint /laporan/{id} failed:', response.data.message)
+      }
+    } catch (error1) {
+      console.log('❌ Endpoint /laporan/{id} error:', error1.message)
 
-  petugasId.value = res.data.data.id
-}
+      // Coba endpoint detail yang lain
+      try {
+        console.log('🔍 Trying endpoint: /api/laporan/detail/' + laporanId)
+        const response = await api.get(`/api/laporan/detail/${laporanId}`, {
+          headers: { Authorization: token },
+        })
 
-// Load laporan data (hanya untuk jenis laporan)
-const loadLaporanData = async () => {
-  if (operationType.value !== 'laporan' || !laporanId) return
+        console.log('📋 Response from /laporan/detail/{id}:', response.data)
 
-  try {
-    const res = await api.get(`/api/laporan/${laporanId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+        if (response.data.success) {
+          laporanDetail = response.data.data
+        }
+      } catch (error2) {
+        console.log('❌ Endpoint /laporan/detail/{id} error:', error2.message)
+      }
+    }
+
+    if (!laporanDetail) {
+      throw new Error('Tidak dapat memuat detail laporan')
+    }
+
+    console.log('✅ Laporan data loaded:', {
+      id: laporanDetail.id,
+      nama: laporanDetail.nama_pemohon || laporanDetail.nama_warga,
+      alamat: laporanDetail.alamat_detail,
+      jenis_sampah: laporanDetail.jenis_sampah,
     })
 
-    if (res.data.success) {
-      laporanData.value = res.data.data
-      // Pre-fill form dengan data laporan
-      form.value.jumlahKarung = laporanData.value.jumlah_karung || 1
-      form.value.keterangan = `Pengambilan dari laporan ${laporanData.value.nama_warga}`
+    laporanData.value = laporanDetail
+    formData.value.laporan_id = laporanId
+
+    // Set keterangan default
+    const kodeLaporan = laporanDetail.kode_laporan || `LAP-${laporanId}`
+    formData.value.keterangan = `Pengambilan sampah dari laporan ${kodeLaporan}`
+
+    // Auto-set jumlah karung berdasarkan estimasi volume
+    if (laporanDetail.estimasi_volume) {
+      const karungMap = {
+        sedikit: 1,
+        sedang: 3,
+        banyak: 5,
+        'sedang (3-5 karung)': 4,
+        'banyak (>5 karung)': 6,
+      }
+      formData.value.total_karung = karungMap[laporanDetail.estimasi_volume] || 1
+      console.log(
+        `✅ Auto-set karung: ${formData.value.total_karung} (dari ${laporanDetail.estimasi_volume})`,
+      )
     }
   } catch (error) {
-    console.error('Gagal memuat data laporan:', error)
-  }
-}
+    console.error('❌ Error loading laporan data:', error)
 
-// Submit berdasarkan jenis operasi
-const handleSubmit = () => {
-  // Validasi
-  if (!form.value.jenisSampah) {
-    $q.notify({ color: 'warning', message: 'Pilih jenis sampah' })
-    return
-  }
-
-  if (form.value.jumlahKarung <= 0) {
-    $q.notify({ color: 'warning', message: 'Jumlah karung harus lebih dari 0' })
-    return
-  }
-
-  // Jika laporan dan pembayaran QRIS, tampilkan modal
-  if (operationType.value === 'laporan' && form.value.metodePembayaran === 'qris') {
-    showQrisModal.value = true
-    return
-  }
-
-  // Langsung submit untuk lainnya
-  submitForm()
-}
-
-const confirmQrisPayment = async () => {
-  // Simulasi pembayaran QRIS
-  loading.value = true
-  await new Promise((resolve) => setTimeout(resolve, 2000))
-  loading.value = false
-
-  $q.notify({
-    color: 'positive',
-    message: 'Pembayaran QRIS berhasil diverifikasi',
-    position: 'top',
-  })
-
-  showQrisModal.value = false
-  submitForm()
-}
-
-const submitForm = async () => {
-  loading.value = true
-
-  try {
-    await loadPetugasId() // Pastikan petugasId tersedia
-
-    let response
-
-    switch (operationType.value) {
-      case 'laporan':
-        // Update laporan yang sudah ada
-        response = await api.post(
-          `/api/petugas/tugas/${laporanId}/ambil`,
-          {
-            petugas_id: petugasId.value,
-            jumlah_karung: form.value.jumlahKarung,
-            metode_pembayaran: form.value.metodePembayaran,
-          },
-          { headers: { Authorization: `Bearer ${token}` } },
-        )
-        break
-
-      case 'patroli':
-        // Buat laporan patroli baru
-        response = await api.post(
-          '/api/petugas/laporan/patroli',
-          {
-            petugas_id: petugasId.value,
-            wilayah: wilayah,
-            jenis_sampah: form.value.jenisSampah,
-            jumlah_karung: form.value.jumlahKarung,
-            keterangan: form.value.keterangan || 'Patroli rutin',
-            tanggal: selectedDate.value,
-          },
-          { headers: { Authorization: `Bearer ${token}` } },
-        )
-        break
-
-      case 'manual':
-        // Buat laporan manual
-        response = await api.post(
-          '/api/petugas/laporan/manual',
-          {
-            petugas_id: petugasId.value,
-            wilayah: wilayah,
-            jenis_sampah: form.value.jenisSampah,
-            jumlah_karung: form.value.jumlahKarung,
-            keterangan: form.value.keterangan || 'Laporan manual',
-            tanggal: selectedDate.value,
-          },
-          { headers: { Authorization: `Bearer ${token}` } },
-        )
-        break
+    // Tampilkan error yang lebih spesifik
+    let errorMsg = 'Gagal memuat data laporan'
+    if (error.message.includes('Token')) {
+      errorMsg = 'Sesi login habis. Silakan login kembali.'
+    } else if (error.message.includes('404')) {
+      errorMsg = 'Laporan tidak ditemukan. Mungkin sudah diproses.'
     }
 
-    if (response?.data?.success) {
+    $q.notify({
+      type: 'negative',
+      message: errorMsg,
+      timeout: 3000,
+      position: 'top',
+    })
+
+    // Redirect back setelah 2 detik
+    setTimeout(() => {
+      router.go(-1)
+    }, 2000)
+  }
+}
+
+// Submit form
+const submitForm = async () => {
+  submitting.value = true
+
+  try {
+    const token = localStorage.getItem('token').replace('Bearer ', '')
+    const petugasId = localStorage.getItem('petugas_id')
+    const petugasNama = localStorage.getItem('petugas_nama')
+
+    if (!petugasId) {
+      throw new Error('Petugas ID tidak ditemukan. Silakan login ulang.')
+    }
+
+    console.log('📦 Data yang akan dikirim:')
+    console.log('- Petugas ID:', petugasId)
+    console.log('- Laporan ID:', laporanData.value?.id)
+    console.log('- Warga ID:', laporanData.value?.id_warga)
+    console.log('- Total Karung:', formData.value.total_karung)
+    console.log('- Harga/Karung:', formData.value.harga_per_karung)
+
+    // 1. Buat data transaksi
+    const transaksiData = {
+      laporan_id: formData.value.laporan_id,
+      petugas_id: parseInt(petugasId),
+      warga_id: laporanData.value?.id_warga || null,
+      jenis: 'pemasukan',
+      kategori: 'Pengambilan Sampah',
+      jumlah: totalPembayaran.value,
+      harga_per_karung: formData.value.harga_per_karung,
+      total_karung: parseInt(formData.value.total_karung),
+      metode_bayar: formData.value.metode_bayar,
+      status_bayar: formData.value.status_bayar,
+      keterangan: formData.value.keterangan || `Pengambilan oleh ${petugasNama}`,
+      tanggal: date.formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
+    }
+
+    console.log('📤 Data transaksi lengkap:', JSON.stringify(transaksiData, null, 2))
+
+    // 2. Kirim ke backend
+    console.log('🚀 Mengirim ke backend...')
+    const response = await api.post('/api/transaksi/pengambilan', transaksiData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    console.log('📥 Response dari backend:', response.data)
+
+    if (response.data.success) {
       $q.notify({
-        color: 'positive',
-        message: getSuccessMessage(),
+        type: 'positive',
+        message: response.data.message || '✅ Pengambilan berhasil dicatat!',
+        timeout: 3000,
         position: 'top',
       })
 
-      router.push({ name: 'PetugasDashboard' })
+      // Auto-refresh dashboard setelah 2 detik
+      setTimeout(() => {
+        router.push({
+          name: 'PetugasDashboard',
+          query: { refresh: new Date().getTime() }, // Force refresh
+        })
+      }, 2000)
     } else {
-      throw new Error(response?.data?.message || 'Gagal menyimpan data')
+      throw new Error(response.data.message || '❌ Gagal menyimpan data')
     }
   } catch (error) {
-    console.error('Submit error:', error)
+    console.error('❌ Error submitting form:', error)
+
+    // Tampilkan error detail
+    let errorMessage = 'Gagal menyimpan data pengambilan'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
     $q.notify({
-      color: 'negative',
-      message: error.response?.data?.message || error.message || 'Gagal menyimpan data',
+      type: 'negative',
+      message: errorMessage,
+      timeout: 5000,
       position: 'top',
     })
+  } finally {
+    submitting.value = false
+  }
+}
+// Initialize
+// Initialize
+const initialize = async () => {
+  loading.value = true
+
+  try {
+    console.log('🚀 FormPengambilanSampah initialized')
+    console.log('📱 Route query:', route.query)
+
+    // Tentukan tipe form dari route query
+    formType.value = route.query.type || 'laporan'
+    console.log('📋 Form type:', formType.value)
+
+    if (route.query.laporan_id) {
+      const laporanId = route.query.laporan_id
+      console.log('📋 Laporan ID from query:', laporanId)
+
+      await loadLaporanData(laporanId)
+    } else if (route.query.patroli === 'true') {
+      console.log('🚓 Form untuk patroli')
+      formData.value.keterangan = `Pengambilan patroli rutin di ${route.query.wilayah || 'Wilayah Tugas'}`
+    } else if (route.query.manual === 'true') {
+      console.log('📝 Form untuk laporan manual')
+      formData.value.keterangan = 'Pengambilan sampah tidak terjadwal'
+    }
+  } catch (error) {
+    console.error('❌ Error initializing form:', error)
   } finally {
     loading.value = false
   }
 }
 
-const getSuccessMessage = () => {
-  switch (operationType.value) {
-    case 'patroli':
-      return 'Hasil patroli berhasil dicatat'
-    case 'manual':
-      return 'Laporan manual berhasil disimpan'
-    default:
-      return 'Pengambilan sampah berhasil dikonfirmasi'
-  }
-}
+// Watch untuk update total pembayaran
+watch(
+  () => [formData.value.total_karung, formData.value.harga_per_karung],
+  () => {
+    // Update otomatis
+  },
+)
 
-// Initialize
-onMounted(async () => {
-  try {
-    await loadPetugasId()
-    await loadLaporanData()
-  } catch (error) {
-    console.error('Initialization error:', error)
-  }
+// Lifecycle
+onMounted(() => {
+  initialize()
 })
 </script>
 
 <style scoped>
-.q-page {
-  background-color: #f1f8e9 !important;
+.max-width-lg {
+  max-width: 600px;
+}
+
+.rounded-borders {
+  border-radius: 16px;
 }
 
 .text-primary {
   color: #006837 !important;
 }
 
-.card-form {
-  border-radius: 16px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-}
-
-.info-section {
-  background-color: #f8f9fa;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #e9ecef;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-}
-
-.info-item {
-  padding: 8px 0;
-}
-
-.form-section {
-  margin-top: 24px;
-}
-
-.input-field :deep(.q-field__control) {
-  background-color: white;
-  border-radius: 12px;
-}
-
-.payment-group {
-  background-color: white;
-  padding: 16px;
-  border-radius: 12px;
-}
-
-.action-buttons {
-  margin-top: 32px;
-}
-
-.btn-konfirmasi {
-  background: #ffc107;
-  border-radius: 12px;
-  height: 50px;
-}
-
-.qris-modal {
-  border-radius: 16px;
-  min-width: 320px;
-  max-width: 400px;
-}
-
-.qrcode-placeholder {
-  background-color: #f5f5f5;
-  border-radius: 12px;
-  padding: 40px;
-  text-align: center;
-  border: 2px dashed #ddd;
+.q-field--filled.bg-green-1 {
+  background-color: #f1f8e9 !important;
 }
 </style>
