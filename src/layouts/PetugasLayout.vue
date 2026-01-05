@@ -49,15 +49,6 @@
               </q-item-section>
             </q-item>
 
-            <q-item clickable v-close-popup @click="showStatistik">
-              <q-item-section avatar>
-                <q-icon name="analytics" color="blue" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>Statistik Petugas</q-item-label>
-              </q-item-section>
-            </q-item>
-
             <q-separator />
 
             <q-item clickable v-close-popup @click="handleLogout">
@@ -261,69 +252,6 @@ const showUserInfo = () => {
     ok: {
       color: 'primary',
       label: 'Tutup',
-    },
-  })
-}
-
-const showStatistik = () => {
-  // Data statistik contoh
-  const hariIni = 25
-  const mingguIni = 150
-  const bulanIni = 580
-  const rataRataPerHari = 28.5
-
-  $q.dialog({
-    title: 'Statistik Petugas',
-    message: `
-      <div class="q-pa-md">
-        <div class="text-center q-mb-md">
-          <div class="text-h5 text-weight-bold text-primary">${userName.value}</div>
-          <div class="text-caption text-grey-7">${userWilayah.value || 'Semua Wilayah'}</div>
-        </div>
-        
-        <div class="row q-mb-md">
-          <div class="col-6 q-pa-xs">
-            <div class="bg-blue-1 q-pa-sm rounded-borders text-center">
-              <div class="text-h6 text-weight-bold text-blue">${hariIni}</div>
-              <div class="text-caption text-grey-7">Hari Ini</div>
-            </div>
-          </div>
-          <div class="col-6 q-pa-xs">
-            <div class="bg-green-1 q-pa-sm rounded-borders text-center">
-              <div class="text-h6 text-weight-bold text-green">${mingguIni}</div>
-              <div class="text-caption text-grey-7">Minggu Ini</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="row q-mb-md">
-          <div class="col-6 q-pa-xs">
-            <div class="bg-orange-1 q-pa-sm rounded-borders text-center">
-              <div class="text-h6 text-weight-bold text-orange">${bulanIni}</div>
-              <div class="text-caption text-grey-7">Bulan Ini</div>
-            </div>
-          </div>
-          <div class="col-6 q-pa-xs">
-            <div class="bg-purple-1 q-pa-sm rounded-borders text-center">
-              <div class="text-h6 text-weight-bold text-purple">${rataRataPerHari}</div>
-              <div class="text-caption text-grey-7">Rata-rata/Hari</div>
-            </div>
-          </div>
-        </div>
-        
-        <q-separator class="q-my-sm" />
-        
-        <div class="text-caption text-grey-7">
-          <div class="q-mb-xs">📊 Data periode: 1 Jan - 31 Des 2024</div>
-          <div>⏰ Update terakhir: Hari ini 15:30</div>
-        </div>
-      </div>
-    `,
-    html: true,
-    ok: {
-      color: 'primary',
-      label: 'Tutup',
-      flat: true,
     },
   })
 }

@@ -19,8 +19,8 @@
       <!-- Form Card -->
       <q-card flat class="rounded-borders q-mb-md">
         <q-card-section>
-          <!-- Informasi Laporan -->
-          <div v-if="laporanData" class="q-mb-lg">
+          <!-- Informasi Laporan (HANYA untuk tipe laporan) -->
+          <div v-if="formType === 'laporan' && laporanData" class="q-mb-lg">
             <div class="text-subtitle1 text-weight-bold q-mb-sm">Informasi Laporan</div>
             <q-list separator dense class="bg-grey-1 rounded-borders q-pa-sm">
               <q-item>
@@ -52,6 +52,54 @@
 
           <!-- Form Input -->
           <q-form @submit="submitForm">
+            <!-- Pilih Warga (HANYA untuk patroli & manual) -->
+            <div v-if="formType !== 'laporan'" class="q-mb-md">
+              <q-select
+                v-model="selectedWarga"
+                :options="wargaOptions"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                filled
+                use-input
+                input-debounce="300"
+                @filter="filterWarga"
+                :rules="[(val) => !!val || 'Pilih warga yang mengambil sampah']"
+              >
+                <template v-slot:no-option>
+                  <q-item>
+                    <q-item-section class="text-grey-7"> Tidak ada warga ditemukan </q-item-section>
+                  </q-item>
+                </template>
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.label }}</q-item-label>
+                      <q-item-label caption>
+                        RT {{ scope.opt.rt }}/RW {{ scope.opt.rw }} - {{ scope.opt.alamat }}
+                      </q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-badge color="green" v-if="scope.opt.saldo > 0">
+                        Rp {{ formatCurrency(scope.opt.saldo) }}
+                      </q-badge>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
+
+            <!-- Nama Warga Manual (jika tidak ada di dropdown) -->
+            <div v-if="formType !== 'laporan' && !selectedWarga" class="q-mb-md">
+              <q-input
+                v-model="formData.nama_warga_manual"
+                label="Nama Warga (jika tidak ada dalam daftar)"
+                filled
+                placeholder="Masukkan nama warga..."
+              />
+            </div>
+
             <!-- Jumlah Karung -->
             <div class="q-mb-md">
               <q-input
@@ -144,7 +192,7 @@
                 type="textarea"
                 filled
                 rows="3"
-                placeholder="Tambahkan keterangan jika perlu..."
+                :placeholder="getKeteranganPlaceholder"
               />
             </div>
 
@@ -186,6 +234,9 @@ const loading = ref(true)
 const submitting = ref(false)
 const laporanData = ref(null)
 const formType = ref('') // 'laporan', 'patroli', 'manual'
+const wargaList = ref([])
+const selectedWarga = ref(null)
+const wargaOptions = ref([])
 
 // Form Data
 const formData = ref({
@@ -197,6 +248,7 @@ const formData = ref({
   keterangan: '',
   jenis: 'pemasukan',
   kategori: 'Pengambilan Sampah',
+  nama_warga_manual: '',
 })
 
 // Options
@@ -225,6 +277,15 @@ const totalPembayaran = computed(() => {
   return formData.value.total_karung * formData.value.harga_per_karung
 })
 
+const getKeteranganPlaceholder = computed(() => {
+  if (formType.value === 'laporan') {
+    const kode = laporanData.value?.kode_laporan || 'LAP-XXX'
+    return `Pengambilan sampah dari laporan ${kode}...`
+  }
+  if (formType.value === 'patroli') return 'Pengambilan sampah patroli rutin...'
+  return 'Catatan tambahan tentang pengambilan sampah...'
+})
+
 // Functions
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('id-ID').format(amount)
@@ -238,108 +299,152 @@ const goBack = () => {
   router.go(-1)
 }
 
-// Load laporan data jika dari laporan
-// Load laporan data jika dari laporan
-const loadLaporanData = async (laporanId) => {
+const filterWarga = (val, update) => {
+  update(() => {
+    const needle = val.toLowerCase()
+
+    wargaOptions.value = wargaList.value
+      .filter((w) => {
+        return (
+          w.nama_lengkap.toLowerCase().includes(needle) ||
+          (w.alamat_lengkap || '').toLowerCase().includes(needle) ||
+          String(w.rt).includes(needle) ||
+          String(w.rw).includes(needle)
+        )
+      })
+      .map((w) => ({
+        value: w.id,
+        label: w.nama_lengkap,
+        alamat: w.alamat_lengkap || '-',
+        rt: w.rt || '-',
+        rw: w.rw || '-',
+        saldo: w.saldo || 0,
+      }))
+  })
+}
+
+// Load data warga untuk dropdown
+// Load data warga untuk dropdown
+const loadWargaList = async () => {
   try {
-    console.log('📋 Loading laporan data ID:', laporanId)
+    console.log('Memulai load warga list...')
 
     const token = localStorage.getItem('token')
     if (!token) {
-      throw new Error('Token tidak ditemukan')
-    }
-
-    // Coba endpoint yang berbeda
-    let laporanDetail = null
-
-    try {
-      // Coba endpoint /laporan/{id} dulu
-      console.log('🔍 Trying endpoint: /api/laporan/' + laporanId)
-      const response = await api.get(`/api/laporan/${laporanId}`, {
-        headers: { Authorization: token },
+      console.error('Token tidak ditemukan di localStorage')
+      $q.notify({
+        type: 'warning',
+        message: 'Silakan login kembali',
+        timeout: 3000,
       })
-
-      console.log('📋 Response from /laporan/{id}:', response.data)
-
-      if (response.data.success) {
-        laporanDetail = response.data.data
-      } else {
-        console.log('❌ Endpoint /laporan/{id} failed:', response.data.message)
-      }
-    } catch (error1) {
-      console.log('❌ Endpoint /laporan/{id} error:', error1.message)
-
-      // Coba endpoint detail yang lain
-      try {
-        console.log('🔍 Trying endpoint: /api/laporan/detail/' + laporanId)
-        const response = await api.get(`/api/laporan/detail/${laporanId}`, {
-          headers: { Authorization: token },
-        })
-
-        console.log('📋 Response from /laporan/detail/{id}:', response.data)
-
-        if (response.data.success) {
-          laporanDetail = response.data.data
-        }
-      } catch (error2) {
-        console.log('❌ Endpoint /laporan/detail/{id} error:', error2.message)
-      }
+      return
     }
 
-    if (!laporanDetail) {
-      throw new Error('Tidak dapat memuat detail laporan')
-    }
+    // Log untuk debugging
+    console.log('Mengambil data warga dengan token:', token.substring(0, 20) + '...')
 
-    console.log('✅ Laporan data loaded:', {
-      id: laporanDetail.id,
-      nama: laporanDetail.nama_pemohon || laporanDetail.nama_warga,
-      alamat: laporanDetail.alamat_detail,
-      jenis_sampah: laporanDetail.jenis_sampah,
+    const response = await api.get('/api/warga/list', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
     })
 
-    laporanData.value = laporanDetail
-    formData.value.laporan_id = laporanId
+    console.log('Response warga list:', response)
 
-    // Set keterangan default
-    const kodeLaporan = laporanDetail.kode_laporan || `LAP-${laporanId}`
-    formData.value.keterangan = `Pengambilan sampah dari laporan ${kodeLaporan}`
+    if (response.data && response.data.success) {
+      wargaList.value = response.data.data || []
+      console.log('Jumlah warga yang didapat:', wargaList.value.length)
 
-    // Auto-set jumlah karung berdasarkan estimasi volume
-    if (laporanDetail.estimasi_volume) {
-      const karungMap = {
-        sedikit: 1,
-        sedang: 3,
-        banyak: 5,
-        'sedang (3-5 karung)': 4,
-        'banyak (>5 karung)': 6,
+      // Map data untuk options
+      wargaOptions.value = wargaList.value.map((w) => ({
+        value: w.id,
+        label: w.nama_lengkap,
+        alamat: w.alamat_lengkap || w.alamat || '-',
+        rt: w.rt || '-',
+        rw: w.rw || '-',
+        saldo: w.saldo || 0,
+        no_telepon: w.no_telepon || '-',
+      }))
+
+      console.log('Warga options:', wargaOptions.value)
+
+      if (wargaList.value.length === 0) {
+        $q.notify({
+          type: 'info',
+          message: 'Belum ada data warga tersedia',
+          timeout: 3000,
+        })
       }
-      formData.value.total_karung = karungMap[laporanDetail.estimasi_volume] || 1
-      console.log(
-        `✅ Auto-set karung: ${formData.value.total_karung} (dari ${laporanDetail.estimasi_volume})`,
-      )
+    } else {
+      console.error('Format response tidak valid:', response.data)
+      $q.notify({
+        type: 'warning',
+        message: 'Format data warga tidak valid',
+        timeout: 3000,
+      })
     }
   } catch (error) {
-    console.error('❌ Error loading laporan data:', error)
+    console.error('Error loading warga list:', error)
 
-    // Tampilkan error yang lebih spesifik
-    let errorMsg = 'Gagal memuat data laporan'
-    if (error.message.includes('Token')) {
-      errorMsg = 'Sesi login habis. Silakan login kembali.'
-    } else if (error.message.includes('404')) {
-      errorMsg = 'Laporan tidak ditemukan. Mungkin sudah diproses.'
+    // Log detail error
+    if (error.response) {
+      console.error('Response error:', error.response.data)
+      console.error('Status:', error.response.status)
     }
 
     $q.notify({
       type: 'negative',
-      message: errorMsg,
-      timeout: 3000,
-      position: 'top',
+      message: 'Gagal memuat data warga: ' + (error.message || 'Unknown error'),
+      timeout: 5000,
     })
 
-    // Redirect back setelah 2 detik
-    setTimeout(() => {
-      router.go(-1)
-    }, 2000)
+    // Fallback data untuk testing
+    wargaOptions.value = [
+      {
+        value: 0,
+        label: 'Test Warga',
+        alamat: 'Jl. Test',
+        rt: '01',
+        rw: '01',
+        saldo: 0,
+      },
+    ]
+  }
+}
+
+// Load laporan data jika dari laporan
+const loadLaporanData = async (laporanId) => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await api.get(`/api/laporan/${laporanId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (response.data.success) {
+      laporanData.value = response.data.data
+      formData.value.laporan_id = laporanId
+
+      const kodeLaporan = laporanData.value.kode_laporan || `LAP-${laporanId}`
+      formData.value.keterangan = `Pengambilan sampah dari laporan ${kodeLaporan}`
+
+      if (laporanData.value.estimasi_volume) {
+        const karungMap = {
+          sedikit: 1,
+          sedang: 3,
+          banyak: 5,
+        }
+        formData.value.total_karung = karungMap[laporanData.value.estimasi_volume] || 1
+      }
+    }
+  } catch (error) {
+    console.error('Error loading laporan data:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Gagal memuat data laporan',
+      timeout: 3000,
+    })
+    setTimeout(() => router.go(-1), 2000)
   }
 }
 
@@ -353,36 +458,49 @@ const submitForm = async () => {
     const petugasNama = localStorage.getItem('petugas_nama')
 
     if (!petugasId) {
-      throw new Error('Petugas ID tidak ditemukan. Silakan login ulang.')
+      throw new Error('Petugas ID tidak ditemukan')
     }
 
-    console.log('📦 Data yang akan dikirim:')
-    console.log('- Petugas ID:', petugasId)
-    console.log('- Laporan ID:', laporanData.value?.id)
-    console.log('- Warga ID:', laporanData.value?.id_warga)
-    console.log('- Total Karung:', formData.value.total_karung)
-    console.log('- Harga/Karung:', formData.value.harga_per_karung)
+    // Tentukan warga_id berdasarkan form type
+    let wargaId = null
+    let namaWarga = ''
 
-    // 1. Buat data transaksi
+    if (formType.value === 'laporan') {
+      wargaId = laporanData.value?.id_warga
+      namaWarga = laporanData.value?.nama_pemohon || laporanData.value?.nama_warga
+    }
+    if (formType.value === 'patroli' || formType.value === 'manual') {
+      if (selectedWarga.value) {
+        const selected = wargaOptions.value.find((w) => w.value === selectedWarga.value)
+
+        wargaId = selected?.value
+        namaWarga = selected?.label
+      } else if (formData.value.nama_warga_manual) {
+        namaWarga = formData.value.nama_warga_manual
+      }
+    }
+
+    // Data transaksi
     const transaksiData = {
-      laporan_id: formData.value.laporan_id,
+      laporan_id: formType.value === 'laporan' ? formData.value.laporan_id : null,
       petugas_id: parseInt(petugasId),
-      warga_id: laporanData.value?.id_warga || null,
+      warga_id: wargaId,
       jenis: 'pemasukan',
-      kategori: 'Pengambilan Sampah',
+      kategori: formType.value === 'patroli' ? 'Patroli Rutin' : 'Pengambilan Sampah',
       jumlah: totalPembayaran.value,
       harga_per_karung: formData.value.harga_per_karung,
       total_karung: parseInt(formData.value.total_karung),
       metode_bayar: formData.value.metode_bayar,
       status_bayar: formData.value.status_bayar,
-      keterangan: formData.value.keterangan || `Pengambilan oleh ${petugasNama}`,
+      keterangan:
+        formData.value.keterangan ||
+        `Pengambilan ${formType.value === 'patroli' ? 'patroli' : 'sampah'} oleh ${petugasNama} ${namaWarga ? 'dari ' + namaWarga : ''}`,
       tanggal: date.formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
     }
 
-    console.log('📤 Data transaksi lengkap:', JSON.stringify(transaksiData, null, 2))
+    console.log('Data transaksi:', transaksiData)
 
-    // 2. Kirim ke backend
-    console.log('🚀 Mengirim ke backend...')
+    // Kirim ke backend
     const response = await api.post('/api/transaksi/pengambilan', transaksiData, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -390,76 +508,87 @@ const submitForm = async () => {
       },
     })
 
-    console.log('📥 Response dari backend:', response.data)
-
     if (response.data.success) {
+      // JIKA DARI LAPORAN: HAPUS LAPORAN
+      if (formType.value === 'laporan' && laporanData.value?.id) {
+        try {
+          await api.delete(`/api/laporan/${laporanData.value.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          console.log('Laporan berhasil dihapus setelah pengambilan')
+        } catch (deleteError) {
+          console.error('Gagal menghapus laporan:', deleteError)
+        }
+      }
+
       $q.notify({
         type: 'positive',
-        message: response.data.message || '✅ Pengambilan berhasil dicatat!',
+        message: '✅ Pengambilan berhasil dicatat!',
         timeout: 3000,
-        position: 'top',
       })
 
-      // Auto-refresh dashboard setelah 2 detik
       setTimeout(() => {
         router.push({
           name: 'PetugasDashboard',
-          query: { refresh: new Date().getTime() }, // Force refresh
+          query: { refresh: new Date().getTime() },
         })
       }, 2000)
     } else {
-      throw new Error(response.data.message || '❌ Gagal menyimpan data')
+      throw new Error(response.data.message || 'Gagal menyimpan data')
     }
   } catch (error) {
-    console.error('❌ Error submitting form:', error)
+    console.error('Error submitting form:', error)
 
-    // Tampilkan error detail
     let errorMessage = 'Gagal menyimpan data pengambilan'
     if (error.response?.data?.message) {
       errorMessage = error.response.data.message
-    } else if (error.message) {
-      errorMessage = error.message
     }
 
     $q.notify({
       type: 'negative',
       message: errorMessage,
       timeout: 5000,
-      position: 'top',
     })
   } finally {
     submitting.value = false
   }
 }
-// Initialize
+
 // Initialize
 const initialize = async () => {
   loading.value = true
+  console.log('Initializing form...')
 
   try {
-    console.log('🚀 FormPengambilanSampah initialized')
-    console.log('📱 Route query:', route.query)
-
-    // Tentukan tipe form dari route query
     formType.value = route.query.type || 'laporan'
-    console.log('📋 Form type:', formType.value)
+    console.log('Form type:', formType.value)
+    console.log('Route query:', route.query)
 
-    if (route.query.laporan_id) {
-      const laporanId = route.query.laporan_id
-      console.log('📋 Laporan ID from query:', laporanId)
+    // Load data berdasarkan tipe form
+    if (formType.value === 'laporan' && route.query.laporan_id) {
+      console.log('Loading laporan data:', route.query.laporan_id)
+      await loadLaporanData(route.query.laporan_id)
+    } else if (formType.value === 'patroli' || formType.value === 'manual') {
+      console.log('Loading warga list for type:', formType.value)
+      await loadWargaList()
 
-      await loadLaporanData(laporanId)
-    } else if (route.query.patroli === 'true') {
-      console.log('🚓 Form untuk patroli')
-      formData.value.keterangan = `Pengambilan patroli rutin di ${route.query.wilayah || 'Wilayah Tugas'}`
-    } else if (route.query.manual === 'true') {
-      console.log('📝 Form untuk laporan manual')
-      formData.value.keterangan = 'Pengambilan sampah tidak terjadwal'
+      // Set default keterangan
+      if (formType.value === 'patroli') {
+        formData.value.keterangan = `Pengambilan patroli rutin di ${route.query.wilayah || 'Wilayah Tugas'}`
+      } else if (formType.value === 'manual') {
+        formData.value.keterangan = 'Pengambilan sampah tidak terjadwal'
+      }
     }
   } catch (error) {
-    console.error('❌ Error initializing form:', error)
+    console.error('Error initializing form:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Gagal menginisialisasi form',
+      timeout: 3000,
+    })
   } finally {
     loading.value = false
+    console.log('Initialization complete')
   }
 }
 
@@ -472,9 +601,22 @@ watch(
 )
 
 // Lifecycle
+// Lifecycle
 onMounted(() => {
+  console.log('Component mounted, route query:', route.query)
   initialize()
 })
+
+// Tambahkan watcher untuk formType
+watch(
+  () => formType.value,
+  (newVal) => {
+    console.log('Form type changed to:', newVal)
+    if (newVal === 'patroli' || newVal === 'manual') {
+      loadWargaList()
+    }
+  },
+)
 </script>
 
 <style scoped>

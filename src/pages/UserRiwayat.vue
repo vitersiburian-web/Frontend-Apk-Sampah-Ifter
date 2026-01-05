@@ -2,8 +2,7 @@
   <q-page class="bg-grey-1">
     <!-- Header dengan background gradient -->
     <div class="header-gradient q-pa-md q-pb-lg">
-      <div class="row items-center q-mb-md">
-      </div>
+      <div class="row items-center q-mb-md"></div>
 
       <div class="q-mb-lg">
         <div class="text-h4 text-weight-bold text-white">Riwayat & Laporan</div>
@@ -1061,7 +1060,11 @@ const loadDaftarBulan = async () => {
     })
 
     if (res.data.success) {
-      opsiBulan.value = res.data.data
+      // TAMBAHKAN field 'value' yang sama dengan 'bulan_tahun'
+      opsiBulan.value = res.data.data.map((item) => ({
+        ...item,
+        value: item.bulan_tahun, // INI YANG PERLU DITAMBAH
+      }))
 
       // Set default to current month if exists
       const currentMonth = opsiBulan.value.find((b) => b.isCurrent)
@@ -1069,9 +1072,8 @@ const loadDaftarBulan = async () => {
     }
   } catch (error) {
     console.error('Error loading bulan:', error)
-    showNotificationFn('negative', 'Gagal memuat daftar bulan', 'error')
 
-    // Fallback: create default month option
+    // Fallback
     const currentDate = new Date()
     const namaBulan = [
       'Januari',
@@ -1090,8 +1092,9 @@ const loadDaftarBulan = async () => {
 
     opsiBulan.value = [
       {
+        bulan_tahun: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+        value: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`, // INI JUGA
         label: `${namaBulan[currentDate.getMonth()]} ${currentDate.getFullYear()}`,
-        value: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
         count: 0,
         isCurrent: true,
       },
@@ -1108,8 +1111,19 @@ const loadRiwayat = async () => {
   error.value = false
   try {
     const params = {}
-    if (bulanDipilih.value) params.bulan = bulanDipilih.value
+
+    // PERBAIKI: Hanya kirim value bulan, bukan object
+    if (bulanDipilih.value) {
+      // Pastikan bulanDipilih adalah string 'YYYY-MM', bukan object
+      params.bulan =
+        typeof bulanDipilih.value === 'object'
+          ? bulanDipilih.value.value // Jika object, ambil value-nya
+          : bulanDipilih.value // Jika string, pakai langsung
+    }
+
     if (tipeFilter.value) params.tipe = tipeFilter.value
+
+    console.log('Param yang dikirim:', params) // Debug
 
     const res = await axios.get('http://localhost:5000/api/riwayat/user', {
       params,
@@ -1137,7 +1151,13 @@ const loadRiwayat = async () => {
 const loadStats = async () => {
   try {
     const params = {}
-    if (bulanDipilih.value) params.bulan = bulanDipilih.value
+    if (bulanDipilih.value) {
+      // SAMA: Hanya kirim string bulan
+      params.bulan =
+        typeof bulanDipilih.value === 'object' ? bulanDipilih.value.value : bulanDipilih.value
+    }
+
+    console.log('Param stats:', params) // Debug
 
     const res = await axios.get('http://localhost:5000/api/riwayat/user/stats', {
       params,
@@ -1151,6 +1171,15 @@ const loadStats = async () => {
     console.error('Error loading stats:', error)
   }
 }
+
+watch(
+  bulanDipilih,
+  (newVal) => {
+    console.log('bulanDipilih berubah:', newVal)
+    console.log('Tipe:', typeof newVal)
+  },
+  { immediate: true },
+)
 
 const loadSaldo = async () => {
   try {

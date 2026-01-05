@@ -112,16 +112,6 @@
             emit-value
             map-options
           />
-
-          <q-input
-            v-model="form.gaji_per_karung"
-            label="Gaji per Karung (Rp)"
-            type="number"
-            outlined
-            dense
-            prefix="Rp"
-            :rules="[(val) => val >= 0 || 'Gaji tidak boleh negatif']"
-          />
         </q-card-section>
 
         <q-card-actions class="q-pa-md">

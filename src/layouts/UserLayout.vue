@@ -48,16 +48,6 @@
                 <q-item-label caption>ID: {{ userId }}</q-item-label>
               </q-item-section>
             </q-item>
-
-            <q-item clickable v-close-popup @click="showSaldo">
-              <q-item-section avatar>
-                <q-icon name="account_balance_wallet" color="green" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label>Saldo & Iuran</q-item-label>
-              </q-item-section>
-            </q-item>
-
             <q-separator />
 
             <q-item clickable v-close-popup @click="handleLogout">
@@ -89,7 +79,6 @@
       >
         <q-route-tab to="/user/dashboard" icon="home" label="Home" exact />
         <q-route-tab to="/user/maps" icon="location_on" label="Maps" exact />
-        <q-route-tab to="/user/notifikasi" icon="notifications" label="Notif" exact />
         <q-route-tab to="/user/riwayat" icon="history" label="Riwayat" exact />
       </q-tabs>
     </q-footer>
@@ -164,7 +153,6 @@ const currentRouteTitle = computed(() => {
   if (route.path === '/user/dashboard') return 'Dashboard'
   if (route.path === '/user/laporan') return 'Laporan Sampah'
   if (route.path === '/user/maps') return 'Peta Lokasi Realtime Petugas'
-  if (route.path === '/user/notifikasi') return 'Notifikasi'
   if (route.path === '/user/riwayat') return 'Riwayat Saya'
   return 'Aplikasi Sampah'
 })
@@ -224,62 +212,6 @@ const showUserInfo = () => {
       color: 'primary',
       label: 'Tutup',
     },
-  })
-}
-
-const showSaldo = () => {
-  // Format saldo dengan separator ribuan
-  const formatSaldo = new Intl.NumberFormat('id-ID').format(userSaldo.value)
-
-  $q.dialog({
-    title: 'Saldo & Iuran',
-    message: `
-      <div class="q-pa-md">
-        <div class="row items-center q-mb-md">
-          <q-icon name="account_balance_wallet" size="40px" color="green" class="q-mr-md" />
-          <div>
-            <div class="text-h4 text-weight-bold text-green">Rp ${formatSaldo}</div>
-            <div class="text-caption text-grey-7">Saldo Anda Saat Ini</div>
-          </div>
-        </div>
-        
-        <q-separator class="q-my-sm" />
-        
-        <div class="text-body2">
-          <div class="q-mb-sm">
-            <div class="text-weight-medium">Riwayat Iuran Terakhir:</div>
-            <div class="text-caption text-grey-7">- Iuran Desember 2024: Rp 20.000</div>
-            <div class="text-caption text-grey-7">- Iuran November 2024: Rp 20.000</div>
-          </div>
-          
-          <q-separator class="q-my-sm" />
-          
-          <div class="q-mt-sm">
-            <div class="text-caption text-grey-7">Iuran rutin: Rp 20.000/bulan</div>
-            <div class="text-caption text-grey-7">Jatuh tempo: Setiap tanggal 5</div>
-          </div>
-        </div>
-      </div>
-    `,
-    html: true,
-    ok: {
-      color: 'green',
-      label: 'Bayar Iuran',
-      flat: true,
-    },
-    cancel: {
-      color: 'grey',
-      label: 'Tutup',
-      flat: true,
-    },
-  }).onOk(() => {
-    // Aksi untuk bayar iuran
-    $q.notify({
-      type: 'info',
-      message: 'Fitur pembayaran iuran akan segera tersedia',
-      position: 'top',
-      timeout: 2000,
-    })
   })
 }
 

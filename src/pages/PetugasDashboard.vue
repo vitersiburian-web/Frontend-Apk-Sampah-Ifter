@@ -468,7 +468,7 @@ const loadPetugasData = async () => {
         totalKarungPetugas.value = petugas.total_karung || 0
         return true
       }
-    } catch (specificError) {
+    } catch {
       console.log('Specific endpoint failed, trying general endpoint...')
     }
 

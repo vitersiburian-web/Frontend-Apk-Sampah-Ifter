@@ -288,7 +288,7 @@
           </q-avatar>
           <div class="text-h6 text-weight-bold text-green q-mb-sm">Pengajuan Berhasil!</div>
           <div class="text-body2 text-grey-7 q-mb-md">
-            Pengajuan pengambilan sampah Anda telah dikirim. Petugas akan menghubungi dalam 1-2 jam.
+            Pengajuan pengambilan sampah Anda telah dikirim. Petugas akan menghubungi atau ke rumah.
           </div>
           <div class="text-caption text-grey-6">
             Kode Pengajuan: <strong>{{ kodePengajuan }}</strong>
@@ -495,8 +495,8 @@ const fetchJadwalData = async () => {
       tanggal: response.data.data.tanggal,
       wilayah: response.data.data.wilayah,
       jam_mulai: response.data.data.jam_mulai?.substring(0, 5) || '08:00',
-      jam_selesai: response.data.data.jam_selesai?.substring(0, 5) || '12:00',
-      nama_petugas: response.data.data.nama_petugas,
+      jam_selesai: response.data.data.jam_selesai?.substring(0, 5) || '13:00',
+      nama_petugas: response.data.data.nama_lengkap,
     }
     form.value.id_jadwal = id_jadwal
   } else {
@@ -506,61 +506,25 @@ const fetchJadwalData = async () => {
 
 // Fetch data warga dengan token
 const fetchWargaData = async () => {
-  const token = localStorage.getItem('token')
+  // AMBIL DARI LOCALSTORAGE SAJA - PASTI ADA KARENA BACKEND KIRIM LENGKAP
+  const userData = JSON.parse(localStorage.getItem('userData'))
 
-  if (!token) {
-    throw new Error('Token tidak ditemukan. Silakan login kembali')
+  console.log('Data warga dari localStorage:', userData)
+
+  // Data HARUS LENGKAP dari backend
+  wargaData.value = {
+    id: userData.warga_id || userData.id, // warga_id dari backend
+    nama_warga: userData.nama,
+    alamat: userData.alamat, // dari backend
+    no_telepon: userData.no_telepon,
+    rt: userData.rt, // dari backend
+    rw: userData.rw, // dari backend
+    wilayah: userData.wilayah, // dari backend
   }
 
-  try {
-    console.log('Fetching warga data...')
+  form.value.id_warga = wargaData.value.id
 
-    const response = await axios.get(`${API_URL}/api/warga`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    console.log('API Response:', response.data)
-
-    if (response.data.success && response.data.data && response.data.data.length > 0) {
-      // Ambil data warga pertama
-      const warga = response.data.data[0]
-
-      // PERHATIAN: Gunakan field sesuai API response
-      wargaData.value = {
-        id: warga.id,
-        nama_warga: warga.nama_lengkap, // dari API: nama_lengkap
-        alamat: warga.alamat_lengkap, // dari API: alamat_lengkap
-        no_telepon: warga.no_telp, // dari API: no_telp (bukan no_telepon)
-        rt: warga.rt,
-        rw: warga.rw,
-        wilayah: warga.kelurahan, // dari API: kelurahan
-      }
-
-      form.value.id_warga = wargaData.value.id
-
-      console.log('Warga data loaded:', wargaData.value)
-    } else {
-      throw new Error('Data warga tidak ditemukan')
-    }
-  } catch (error) {
-    console.error('Error fetching warga:', error)
-
-    // Fallback untuk testing
-    console.warn('Using fallback data for testing...')
-    wargaData.value = {
-      id: 1,
-      nama_warga: 'Cicih',
-      alamat: 'Bandung',
-      no_telepon: '08157252232342',
-      rt: '02',
-      rw: '01',
-      wilayah: 'Suraja',
-    }
-    form.value.id_warga = wargaData.value.id
-  }
+  console.log('Data warga untuk form:', wargaData.value)
 }
 
 const submitPengajuan = async () => {

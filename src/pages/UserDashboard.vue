@@ -2,10 +2,8 @@
   <q-page class="q-pa-md bg-green-1">
     <!-- Welcome Header -->
     <div class="q-mb-lg">
-      <div class="text-h5 text-weight-bold text-dark-green q-mb-xs">
-        Selamat datang, {{ username }}
-      </div>
-      <div class="text-caption text-grey-7">{{ getGreeting() }} | Wilayah: {{ wilayah }}</div>
+      <div class="text-h5 text-weight-bold text-dark-green q-mb-xs">Selamat datang, {{ nama }}</div>
+      <div class="text-caption text-grey-7">{{ getGreeting() }}</div>
     </div>
 
     <!-- Pengajuan Status Card -->
@@ -61,7 +59,7 @@
       </q-card-section>
     </q-card>
 
-    <!-- Jadwal Pengambilan Card -->
+    <!-- Jadwal Pengambilan Card - UPDATED TO MATCH TODAY'S STYLE -->
     <q-card flat class="schedule-card q-mb-lg">
       <q-card-section class="q-pa-none">
         <!-- Header dengan icon -->
@@ -69,7 +67,9 @@
           <div class="row items-center">
             <q-icon name="calendar_month" color="primary" size="28px" class="q-mr-md" />
             <div>
-              <div class="text-subtitle1 text-weight-bold text-dark-green">Jadwal Pengambilan</div>
+              <div class="text-subtitle1 text-weight-bold text-dark-green">
+                Jadwal Pengambilan Terdekat
+              </div>
               <div class="text-caption text-grey-7">Jadwal pengambilan sampah terdekat</div>
             </div>
           </div>
@@ -77,7 +77,8 @@
 
         <!-- Content -->
         <div class="q-pa-md">
-          <div v-if="jadwalToday.length > 0">
+          <!-- Tampilan hari ini jika ada -->
+          <div v-if="jadwalToday.length > 0" class="today-schedule">
             <div class="row items-center q-mb-sm">
               <q-icon name="today" color="green" size="20px" class="q-mr-sm" />
               <div class="text-h6 text-weight-bold text-dark-green">
@@ -126,10 +127,11 @@
             </q-badge>
           </div>
 
-          <div v-else-if="jadwalNext" class="text-center q-py-lg">
+          <!-- Tampilan jadwal terdekat jika tidak ada hari ini -->
+          <div v-else-if="jadwalNext" class="next-schedule">
             <div class="row items-center q-mb-sm">
-              <q-icon name="schedule" color="blue" size="20px" class="q-mr-sm" />
-              <div class="text-h6 text-weight-bold text-blue">
+              <q-icon name="calendar_today" color="primary" size="20px" class="q-mr-sm" />
+              <div class="text-h6 text-weight-bold text-dark-green">
                 {{ formatDay(jadwalNext.tanggal) }}
               </div>
             </div>
@@ -162,7 +164,8 @@
             </div>
           </div>
 
-          <div v-else class="text-center q-py-lg">
+          <!-- Tampilan jika tidak ada jadwal -->
+          <div v-else class="no-schedule text-center q-py-lg">
             <q-icon name="event_busy" size="48px" color="grey-4" />
             <div class="text-subtitle2 text-grey-6 q-mt-md">Belum ada jadwal pengambilan</div>
             <div class="text-caption text-grey-5">Jadwal akan muncul ketika ada penugasan</div>
@@ -206,8 +209,12 @@
       </div>
 
       <div class="row q-col-gutter-sm">
-        <div v-for="jadwal in jadwalWeek.slice(1)" :key="jadwal.id" class="col-12">
-          <q-card flat class="jadwal-mendatang-card q-mb-xs">
+        <div v-for="jadwal in jadwalWeek" :key="jadwal.id" class="col-12">
+          <q-card
+            flat
+            class="jadwal-mendatang-card q-mb-xs"
+            :class="{ 'today-card': isToday(jadwal.tanggal) }"
+          >
             <q-card-section class="q-pa-sm">
               <div class="row items-center">
                 <div class="col">
@@ -228,7 +235,10 @@
                   </div>
                 </div>
                 <div class="col-auto">
-                  <div class="text-caption text-grey-7 text-center">
+                  <div
+                    class="text-caption text-center"
+                    :class="isToday(jadwal.tanggal) ? 'text-primary' : 'text-grey-7'"
+                  >
                     {{ getDaysUntil(jadwal.tanggal) }}
                   </div>
                 </div>
@@ -236,46 +246,6 @@
             </q-card-section>
           </q-card>
         </div>
-      </div>
-    </div>
-
-    <!-- Quick Stats -->
-    <div class="row q-col-gutter-sm q-mt-lg">
-      <div class="col-6">
-        <q-card flat class="stat-card">
-          <q-card-section class="text-center">
-            <q-icon name="history" color="primary" size="md" class="q-mb-xs" />
-            <div class="text-h6 text-weight-bold text-dark">{{ finishedCount }}</div>
-            <div class="text-caption text-grey-7">Selesai</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-6">
-        <q-card flat class="stat-card">
-          <q-card-section class="text-center">
-            <q-icon name="pending_actions" color="orange" size="md" class="q-mb-xs" />
-            <div class="text-h6 text-weight-bold text-dark">{{ pendingCount }}</div>
-            <div class="text-caption text-grey-7">Menunggu</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-6">
-        <q-card flat class="stat-card">
-          <q-card-section class="text-center">
-            <q-icon name="calendar_month" color="green" size="md" class="q-mb-xs" />
-            <div class="text-h6 text-weight-bold text-dark">{{ jadwalWeek.length }}</div>
-            <div class="text-caption text-grey-7">Jadwal</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-6">
-        <q-card flat class="stat-card">
-          <q-card-section class="text-center">
-            <q-icon name="location_on" color="blue" size="md" class="q-mb-xs" />
-            <div class="text-h6 text-weight-bold text-dark">{{ wilayah }}</div>
-            <div class="text-caption text-grey-7">Wilayah</div>
-          </q-card-section>
-        </q-card>
       </div>
     </div>
 
@@ -321,24 +291,19 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { date } from 'quasar'
 import axios from 'axios'
-import { clearPengajuan } from 'src/stores/laporanStore'
 
 const router = useRouter()
 const API_URL = 'http://localhost:5000'
 
 // State
 const showDialog = ref(false)
-const username = ref('')
+const nama = ref('')
 const wilayah = ref('')
 const loadingAction = ref(false)
-const pendingCount = ref(0)
-const finishedCount = ref(0)
 const jadwalToday = ref([])
 const jadwalWeek = ref([])
 const pengajuanList = ref([])
 const loading = ref(false)
-
-// Data dari store
 
 // Computed
 const pengajuanAktif = computed(() => {
@@ -490,7 +455,7 @@ const getPengajuanMessage = (status) => {
 }
 
 const clearPengajuanData = () => {
-  clearPengajuan()
+  // Clear pengajuan from store if exists
   fetchPengajuanList()
 }
 
@@ -517,34 +482,38 @@ const goToLaporan = () => {
 // Fetch functions
 const fetchWargaData = async () => {
   try {
+    // Ambil nama dari localStorage
+    const userDataStr = localStorage.getItem('userData')
+    if (userDataStr) {
+      const userData = JSON.parse(userDataStr)
+      nama.value = userData.nama || 'Pengguna'
+    } else {
+      nama.value = 'Pengguna'
+    }
+
+    // Wilayah tetap dari API
     const user_id = localStorage.getItem('user_id')
     if (!user_id) {
-      username.value = 'Pengguna'
       wilayah.value = '-'
       return
     }
 
     const token = localStorage.getItem('token')
-
-    // Coba fetch dari API yang sudah ada
     const res = await axios.get(`${API_URL}/api/warga`, {
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
       },
-      params: { user_id: user_id },
+      params: { user_id },
     })
 
-    if (res.data.success && res.data.data && res.data.data.length > 0) {
-      username.value = res.data.data[0].nama_warga || 'Pengguna'
+    if (res.data.success && res.data.data.length > 0) {
       wilayah.value = res.data.data[0].wilayah || '-'
     } else {
-      username.value = 'Pengguna'
       wilayah.value = '-'
     }
   } catch (err) {
-    console.error('Gagal memuat data warga:', err)
-    username.value = 'Pengguna'
+    console.error(err)
+    nama.value = 'Pengguna'
     wilayah.value = '-'
   }
 }
@@ -614,13 +583,6 @@ const fetchPengajuanList = async () => {
 
     if (laporanRes.data.success) {
       pengajuanList.value = laporanRes.data.data || []
-
-      // Calculate stats
-      pendingCount.value = pengajuanList.value.filter(
-        (p) => p.status === 'menunggu' || p.status === 'diproses',
-      ).length
-
-      finishedCount.value = pengajuanList.value.filter((p) => p.status === 'selesai').length
     }
   } catch (err) {
     console.error('Gagal memuat pengajuan:', err)
@@ -730,6 +692,17 @@ onMounted(() => {
   border-radius: 12px;
   border: 1px solid #e0e0e0;
   background: white;
+  transition: all 0.3s ease;
+}
+
+.jadwal-mendatang-card.today-card {
+  border: 2px solid #ffca28;
+  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+}
+
+.jadwal-mendatang-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .date-badge {
@@ -737,17 +710,8 @@ onMounted(() => {
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 600;
-}
-
-/* Stat Cards */
-.stat-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: transform 0.2s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
+  min-width: 60px;
+  text-align: center;
 }
 
 /* Dialog */
@@ -755,5 +719,15 @@ onMounted(() => {
   border-radius: 20px;
   min-width: 320px;
   max-width: 400px;
+}
+
+/* Jadwal Today dan Next styling konsisten */
+.today-schedule,
+.next-schedule {
+  padding: 8px 0;
+}
+
+.no-schedule {
+  padding: 32px 0;
 }
 </style>

@@ -59,22 +59,6 @@
           </q-card-section>
         </q-card>
       </div>
-      <div class="col-6 col-sm-3">
-        <q-card class="stat-card text-center">
-          <q-card-section>
-            <div class="text-h6 text-blue">Rp {{ formatCurrency(totalSaldo) }}</div>
-            <div class="text-caption text-grey-7">Total Saldo</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-6 col-sm-3">
-        <q-card class="stat-card text-center">
-          <q-card-section>
-            <div class="text-h6 text-orange">{{ avgPerWarga }}%</div>
-            <div class="text-caption text-grey-7">Rata-rata</div>
-          </q-card-section>
-        </q-card>
-      </div>
     </div>
 
     <!-- Loading State -->
@@ -279,9 +263,9 @@ const loadWarga = async () => {
     if (res.data.success) {
       wargaList.value = res.data.data.map((warga) => ({
         id: warga.id,
-        nama_warga: warga.nama_warga || warga.nama_lengkap,
-        no_telp: warga.no_telp || warga.no_telepon,
-        alamat: warga.alamat,
+        nama_warga: warga.nama_lengkap,
+        no_telp: warga.no_telp,
+        alamat: warga.alamat_lengkap,
         rt: warga.rt || '-',
         rw: warga.rw || '-',
         kelurahan: warga.kelurahan,
@@ -294,6 +278,7 @@ const loadWarga = async () => {
     }
   } catch (err) {
     console.error('Gagal mengambil data warga:', err)
+    console.error('DETAIL ERROR:', err.response?.data || err)
 
     if (err.response?.status === 401) {
       $q.notify({
@@ -335,15 +320,6 @@ const filteredWarga = computed(() => {
 const rtCount = computed(() => {
   const rts = new Set(wargaList.value.map((w) => w.rt).filter((rt) => rt && rt !== '-'))
   return rts.size
-})
-
-const totalSaldo = computed(() => {
-  return wargaList.value.reduce((sum, w) => sum + (w.saldo || 0), 0)
-})
-
-const avgPerWarga = computed(() => {
-  if (wargaList.value.length === 0) return 0
-  return Math.round(totalSaldo.value / wargaList.value.length)
 })
 
 // Hapus warga

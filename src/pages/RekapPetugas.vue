@@ -304,10 +304,6 @@ const currentUserId = computed(() => {
   return parseInt(localStorage.getItem('user_id')) || null
 })
 
-const currentUserRole = computed(() => {
-  return localStorage.getItem('role') || null
-})
-
 // Fetch data from API
 const fetchRekap = async () => {
   loading.value = true
@@ -366,47 +362,6 @@ const fetchRekap = async () => {
 }
 
 // Calculate summary statistics (backup calculation)
-const calculateSummary = () => {
-  if (transactions.value.length === 0) return
-
-  const initSummary = {
-    pemasukan: 0,
-    pengeluaran: 0,
-    saldo: 0,
-    transaksi_saya: 0,
-    pemasukan_saya: 0,
-    total_transaksi: transactions.value.length,
-    transaksi_lunas: 0,
-    transaksi_pending: 0,
-  }
-
-  transactions.value.forEach((transaksi) => {
-    // Status count
-    if (transaksi.status_bayar === 'lunas') {
-      initSummary.transaksi_lunas++
-    } else {
-      initSummary.transaksi_pending++
-    }
-
-    // Amount calculation
-    if (transaksi.jenis === 'pemasukan') {
-      initSummary.pemasukan += parseFloat(transaksi.jumlah)
-    } else {
-      initSummary.pengeluaran += parseFloat(transaksi.jumlah)
-    }
-
-    // My transactions
-    if (transaksi.petugas_id === currentUserId.value) {
-      initSummary.transaksi_saya++
-      if (transaksi.jenis === 'pemasukan') {
-        initSummary.pemasukan_saya += parseFloat(transaksi.jumlah)
-      }
-    }
-  })
-
-  initSummary.saldo = initSummary.pemasukan - initSummary.pengeluaran
-  summary.value = initSummary
-}
 
 // Filter transactions based on selected filters
 const filteredTransactions = computed(() => {
