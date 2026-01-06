@@ -1,81 +1,84 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+  <q-layout view="hHh LpR fFf">
+    <q-header elevated class="bg-primary text-white">
       <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
-
-        <q-toolbar-title> Quasar App </q-toolbar-title>
-
-        <div>Quasar v{{ $q.version }}</div>
+        <!-- Logo/Brand -->
+        <q-toolbar-title>
+          <q-avatar>
+            <img src="logo.png" alt="Logo">
+          </q-avatar>
+          SPS App
+        </q-toolbar-title>
+        
+        <!-- Spacer -->
+        <q-space />
+        
+        <!-- Notifications -->
+        <notification-system 
+          :user="user"
+          class="q-mr-sm"
+          v-if="user"
+        />
+        
+        <!-- User Menu -->
+        <q-btn flat round dense icon="person">
+          <q-menu>
+            <q-list style="min-width: 150px">
+              <q-item clickable v-close-popup>
+                <q-item-section avatar>
+                  <q-icon name="person" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ user?.nama || user?.username }}</q-item-label>
+                  <q-item-label caption>{{ user?.role }}</q-item-label>
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item clickable v-close-popup @click="logout">
+                <q-item-section avatar>
+                  <q-icon name="logout" />
+                </q-item-section>
+                <q-item-section>Logout</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
       </q-toolbar>
     </q-header>
-
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <q-list>
-        <q-item-label header> Essential Links </q-item-label>
-
-        <EssentialLink v-for="link in linksList" :key="link.title" v-bind="link" />
-      </q-list>
-    </q-drawer>
-
+    
+    <!-- Page Content -->
     <q-page-container>
       <router-view />
     </q-page-container>
   </q-layout>
 </template>
 
-<script setup>
-import { ref } from 'vue'
-import EssentialLink from 'components/EssentialLink.vue'
+<script>
+import { defineComponent, ref, computed } from 'vue'
+import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
+import NotificationSystem from 'components/NotificationSystem.vue'
 
-const linksList = [
-  {
-    title: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev',
+export default defineComponent({
+  name: 'MainLayout',
+  components: {
+    NotificationSystem
   },
-  {
-    title: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework',
-  },
-  {
-    title: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev',
-  },
-  {
-    title: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev',
-  },
-  {
-    title: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev',
-  },
-  {
-    title: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev',
-  },
-  {
-    title: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev',
-  },
-]
-
-const leftDrawerOpen = ref(false)
-
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value
-}
+  setup() {
+    const store = useStore()
+    const router = useRouter()
+    
+    const user = computed(() => store.state.auth.user)
+    
+    const logout = async () => {
+      await store.dispatch('auth/logout')
+      router.push('/login')
+    }
+    
+    return {
+      user,
+      logout
+    }
+  }
+})
 </script>

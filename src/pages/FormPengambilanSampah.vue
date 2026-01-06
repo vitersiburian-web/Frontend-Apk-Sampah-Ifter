@@ -65,7 +65,8 @@
                 use-input
                 input-debounce="300"
                 @filter="filterWarga"
-                :rules="[(val) => !!val || 'Pilih warga yang mengambil sampah']"
+                label="Pilih Warga (Opsional)"
+                hint="Pilih warga jika ada, atau isi manual di bawah"
               >
                 <template v-slot:no-option>
                   <q-item>
@@ -90,14 +91,26 @@
               </q-select>
             </div>
 
-            <!-- Nama Warga Manual (jika tidak ada di dropdown) -->
+            <!-- Nama Warga Manual -->
             <div v-if="formType !== 'laporan' && !selectedWarga" class="q-mb-md">
               <q-input
                 v-model="formData.nama_warga_manual"
-                label="Nama Warga (jika tidak ada dalam daftar)"
+                label="Nama Warga (isi manual jika tidak ada di dropdown)"
                 filled
                 placeholder="Masukkan nama warga..."
+                :rules="[(val) => !!val || 'Nama warga harus diisi']"
               />
+            </div>
+
+            <!-- Tampilkan warga yang dipilih -->
+            <div v-if="selectedWarga" class="q-mb-md">
+              <q-chip color="primary" text-color="white">
+                <q-avatar icon="person" />
+                {{ getSelectedWargaName }}
+              </q-chip>
+              <div class="text-caption text-grey-7 q-mt-xs">
+                Warga terpilih akan dicatat dalam transaksi
+              </div>
             </div>
 
             <!-- Jumlah Karung -->
@@ -327,11 +340,14 @@ const filterWarga = (val, update) => {
 // Load data warga untuk dropdown
 const loadWargaList = async () => {
   try {
-    console.log('Memulai load warga list...')
+    console.log('🚀 [DEBUG] Memulai load warga list...')
 
+    // Cek apakah ada token
     const token = localStorage.getItem('token')
+    console.log('🔑 [DEBUG] Token di localStorage:', token ? 'Ada' : 'Tidak ada')
+
     if (!token) {
-      console.error('Token tidak ditemukan di localStorage')
+      console.error('❌ [DEBUG] Token tidak ditemukan')
       $q.notify({
         type: 'warning',
         message: 'Silakan login kembali',
@@ -340,79 +356,82 @@ const loadWargaList = async () => {
       return
     }
 
-    // Log untuk debugging
-    console.log('Mengambil data warga dengan token:', token.substring(0, 20) + '...')
+    // Bersihkan token dari "Bearer " jika ada
+    const cleanToken = token.replace('Bearer ', '')
+    console.log('🔑 [DEBUG] Token setelah dibersihkan:', cleanToken.substring(0, 20) + '...')
 
-    const response = await api.get('/api/warga/list', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    // Cek user info untuk debugging
+    const userId = localStorage.getItem('user_id')
+    const userRole = localStorage.getItem('user_role')
+    console.log('👤 [DEBUG] User ID:', userId)
+    console.log('👤 [DEBUG] User Role:', userRole)
 
-    console.log('Response warga list:', response)
+    try {
+      console.log('🌐 [DEBUG] Mengirim request ke /api/warga/list...')
 
-    if (response.data && response.data.success) {
-      wargaList.value = response.data.data || []
-      console.log('Jumlah warga yang didapat:', wargaList.value.length)
-
-      // Map data untuk options
-      wargaOptions.value = wargaList.value.map((w) => ({
-        value: w.id,
-        label: w.nama_lengkap,
-        alamat: w.alamat_lengkap || w.alamat || '-',
-        rt: w.rt || '-',
-        rw: w.rw || '-',
-        saldo: w.saldo || 0,
-        no_telepon: w.no_telepon || '-',
-      }))
-
-      console.log('Warga options:', wargaOptions.value)
-
-      if (wargaList.value.length === 0) {
-        $q.notify({
-          type: 'info',
-          message: 'Belum ada data warga tersedia',
-          timeout: 3000,
-        })
-      }
-    } else {
-      console.error('Format response tidak valid:', response.data)
-      $q.notify({
-        type: 'warning',
-        message: 'Format data warga tidak valid',
-        timeout: 3000,
+      // OPTION 1: Gunakan fetch langsung untuk debugging
+      const response = await fetch('http://localhost:5000/api/warga/list', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${cleanToken}`,
+          'Content-Type': 'application/json',
+        },
       })
+
+      console.log('📡 [DEBUG] Response status:', response.status)
+      console.log('📡 [DEBUG] Response headers:', response.headers)
+
+      const responseData = await response.json()
+      console.log('📊 [DEBUG] Response data:', responseData)
+
+      if (responseData.success) {
+        wargaList.value = responseData.data || []
+        console.log(`✅ [DEBUG] Ditemukan ${wargaList.value.length} warga`)
+
+        wargaOptions.value = wargaList.value.map((w) => ({
+          value: w.id,
+          label: w.nama_lengkap,
+          alamat: w.alamat_lengkap || '-',
+          rt: w.rt || '-',
+          rw: w.rw || '-',
+          saldo: w.saldo || 0,
+        }))
+      } else {
+        console.error('❌ [DEBUG] Response tidak success:', responseData)
+      }
+    } catch (fetchError) {
+      console.error('❌ [DEBUG] Error menggunakan fetch:', fetchError)
+
+      // OPTION 2: Coba dengan axios api
+      console.log('🔄 [DEBUG] Mencoba dengan axios...')
+      try {
+        const response = await api.get('/api/warga/list', {
+          headers: {
+            Authorization: `Bearer ${cleanToken}`,
+          },
+        })
+
+        console.log('📊 [DEBUG] Axios response:', response.data)
+
+        if (response.data.success) {
+          wargaList.value = response.data.data || []
+          wargaOptions.value = wargaList.value.map((w) => ({
+            value: w.id,
+            label: w.nama_lengkap,
+            alamat: w.alamat_lengkap || '-',
+            rt: w.rt || '-',
+            rw: w.rw || '-',
+            saldo: w.saldo || 0,
+          }))
+        }
+      } catch (axiosError) {
+        console.error('❌ [DEBUG] Error dengan axios:', axiosError)
+      }
     }
   } catch (error) {
-    console.error('Error loading warga list:', error)
-
-    // Log detail error
-    if (error.response) {
-      console.error('Response error:', error.response.data)
-      console.error('Status:', error.response.status)
-    }
-
-    $q.notify({
-      type: 'negative',
-      message: 'Gagal memuat data warga: ' + (error.message || 'Unknown error'),
-      timeout: 5000,
-    })
-
-    // Fallback data untuk testing
-    wargaOptions.value = [
-      {
-        value: 0,
-        label: 'Test Warga',
-        alamat: 'Jl. Test',
-        rt: '01',
-        rw: '01',
-        saldo: 0,
-      },
-    ]
+    console.error('💥 [DEBUG] Error utama di loadWargaList:', error)
   }
 }
-
 // Load laporan data jika dari laporan
 const loadLaporanData = async (laporanId) => {
   try {
@@ -449,6 +468,16 @@ const loadLaporanData = async (laporanId) => {
 }
 
 // Submit form
+// Computed properties tambahan
+const getSelectedWargaName = computed(() => {
+  if (selectedWarga.value) {
+    const selected = wargaOptions.value.find((w) => w.value === selectedWarga.value)
+    return selected ? selected.label : 'Warga tidak ditemukan'
+  }
+  return ''
+})
+
+// Perbaiki fungsi submitForm
 const submitForm = async () => {
   submitting.value = true
 
@@ -464,27 +493,33 @@ const submitForm = async () => {
     // Tentukan warga_id berdasarkan form type
     let wargaId = null
     let namaWarga = ''
+    let keteranganWarga = ''
 
     if (formType.value === 'laporan') {
       wargaId = laporanData.value?.id_warga
       namaWarga = laporanData.value?.nama_pemohon || laporanData.value?.nama_warga
-    }
-    if (formType.value === 'patroli' || formType.value === 'manual') {
+      keteranganWarga = `Laporan ${laporanData.value?.kode_laporan || ''}`
+    } else if (formType.value === 'patroli' || formType.value === 'manual') {
       if (selectedWarga.value) {
         const selected = wargaOptions.value.find((w) => w.value === selectedWarga.value)
-
         wargaId = selected?.value
         namaWarga = selected?.label
+        keteranganWarga = `Warga terdaftar: ${namaWarga}`
       } else if (formData.value.nama_warga_manual) {
         namaWarga = formData.value.nama_warga_manual
+        keteranganWarga = `Warga tidak terdaftar: ${namaWarga}`
+        // wargaId tetap null karena warga tidak terdaftar
+      } else {
+        // Jika patroli tanpa warga spesifik
+        keteranganWarga = 'Patroli rutin tanpa warga spesifik'
       }
     }
 
-    // Data transaksi
+    // Data transaksi untuk patroli (sama dengan yang ada)
     const transaksiData = {
       laporan_id: formType.value === 'laporan' ? formData.value.laporan_id : null,
       petugas_id: parseInt(petugasId),
-      warga_id: wargaId,
+      warga_id: wargaId, // Bisa null untuk patroli tanpa warga spesifik
       jenis: 'pemasukan',
       kategori: formType.value === 'patroli' ? 'Patroli Rutin' : 'Pengambilan Sampah',
       jumlah: totalPembayaran.value,
@@ -494,11 +529,11 @@ const submitForm = async () => {
       status_bayar: formData.value.status_bayar,
       keterangan:
         formData.value.keterangan ||
-        `Pengambilan ${formType.value === 'patroli' ? 'patroli' : 'sampah'} oleh ${petugasNama} ${namaWarga ? 'dari ' + namaWarga : ''}`,
+        `${formType.value === 'patroli' ? 'Patroli' : 'Pengambilan'} oleh ${petugasNama}. ${keteranganWarga}`,
       tanggal: date.formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss'),
     }
 
-    console.log('Data transaksi:', transaksiData)
+    console.log('Data transaksi untuk patroli:', transaksiData)
 
     // Kirim ke backend
     const response = await api.post('/api/transaksi/pengambilan', transaksiData, {
@@ -509,18 +544,6 @@ const submitForm = async () => {
     })
 
     if (response.data.success) {
-      // JIKA DARI LAPORAN: HAPUS LAPORAN
-      if (formType.value === 'laporan' && laporanData.value?.id) {
-        try {
-          await api.delete(`/api/laporan/${laporanData.value.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          console.log('Laporan berhasil dihapus setelah pengambilan')
-        } catch (deleteError) {
-          console.error('Gagal menghapus laporan:', deleteError)
-        }
-      }
-
       $q.notify({
         type: 'positive',
         message: '✅ Pengambilan berhasil dicatat!',
@@ -593,10 +616,25 @@ const initialize = async () => {
 }
 
 // Watch untuk update total pembayaran
+// Watch untuk reset nama manual jika memilih dari dropdown
 watch(
-  () => [formData.value.total_karung, formData.value.harga_per_karung],
-  () => {
-    // Update otomatis
+  () => selectedWarga.value,
+  (newVal) => {
+    if (newVal) {
+      // Kosongkan nama manual jika pilih dari dropdown
+      formData.value.nama_warga_manual = ''
+    }
+  },
+)
+
+// Watch untuk reset dropdown jika isi manual
+watch(
+  () => formData.value.nama_warga_manual,
+  (newVal) => {
+    if (newVal && newVal.trim() !== '') {
+      // Reset dropdown jika isi manual
+      selectedWarga.value = null
+    }
   },
 )
 

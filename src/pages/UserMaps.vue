@@ -238,7 +238,7 @@ export default {
     },
 
     addAllMarkers(data) {
-      // Custom icon for petugas
+      console.log('DATA LIVE:', data)
       const petugasIcon = L.icon({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -250,35 +250,29 @@ export default {
       })
 
       data.forEach((p) => {
-        // Skip if coordinates are invalid
         if (
-          !p.latitude ||
-          !p.longitude ||
-          p.latitude === 0 ||
-          p.longitude === 0 ||
-          p.latitude === '0' ||
-          p.longitude === '0'
+          !p.live_latitude ||
+          !p.live_longitude ||
+          p.live_latitude === 0 ||
+          p.live_longitude === 0
         ) {
-          console.warn(`Invalid coordinates for ${p.nama_petugas}:`, p.latitude, p.longitude)
+          console.warn('Invalid live location:', p)
           return
         }
 
-        const marker = L.marker([parseFloat(p.latitude), parseFloat(p.longitude)], {
-          icon: petugasIcon,
-        }).addTo(this.map).bindPopup(`
-            <div style="min-width: 200px">
-              <b>${p.nama_petugas}</b><br>
-              <small>Username: ${p.username}</small><br>
-              <small>Telepon: ${p.no_telepon || '-'}</small><br>
-              <small>Email: ${p.email || '-'}</small><br>
-              <small>Alamat: ${p.alamat || '-'}</small>
-            </div>
-          `)
+        const lat = parseFloat(p.live_latitude)
+        const lng = parseFloat(p.live_longitude)
+
+        const marker = L.marker([lat, lng], { icon: petugasIcon }).addTo(this.map).bindPopup(`
+        <div style="min-width: 200px">
+          <b>${p.nama_lengkap}</b><br>
+          <small>Telepon: ${p.no_telepon || '-'}</small><br>
+        </div>
+      `)
 
         this.markers.push(marker)
       })
     },
-
     clearMarkers() {
       this.markers.forEach((marker) => {
         if (this.map.hasLayer(marker)) {

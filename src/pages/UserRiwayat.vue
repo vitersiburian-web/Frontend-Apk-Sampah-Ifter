@@ -334,19 +334,30 @@
                 </div>
 
                 <!-- Content -->
+                <!-- Di Grid View -->
                 <div class="text-center q-my-md">
                   <div class="text-h3 text-weight-bold" :class="getTextColor(item)">
                     {{
-                      item.tipe === 'transaksi' ? formatCurrency(item.jumlah) : item.jumlah_karung
+                      item.tipe === 'transaksi'
+                        ? formatCurrency(item.jumlah)
+                        : getDisplayJumlahKarung(item)
                     }}
                   </div>
                   <div class="text-caption text-grey-7">
-                    {{ item.tipe === 'transaksi' ? item.jenis : item.jumlah_karung + ' Karung' }}
+                    {{ item.tipe === 'transaksi' ? formatJumlahKarung(item) : 'Estimasi Volume' }}
                   </div>
                   <div class="text-caption text-grey-7 q-mt-xs">
                     {{ item.jenis }}
                   </div>
                 </div>
+
+                <!-- Di List View -->
+                <q-item-label class="text-weight-bold text-dark">
+                  <span v-if="item.tipe === 'transaksi'">
+                    {{ item.jenis }} - Rp {{ formatCurrency(item.jumlah) }}
+                  </span>
+                  <span v-else> {{ item.jenis }} - {{ getDisplayJumlahKarung(item) }} </span>
+                </q-item-label>
 
                 <!-- Status -->
                 <div class="text-center q-mb-sm">
@@ -507,6 +518,7 @@
             <!-- Laporan Detail -->
             <div v-if="selectedItem.tipe === 'laporan'">
               <!-- Status & Info -->
+              <!-- Status & Info -->
               <div class="row items-center q-mb-lg">
                 <div class="col-auto">
                   <q-avatar
@@ -520,7 +532,7 @@
                 </div>
                 <div class="col q-ml-md">
                   <div class="text-h6 text-weight-bold">
-                    {{ selectedItem.jumlah_karung }} Karung Sampah
+                    {{ formatJumlahKarung(selectedItem) }} Sampah
                   </div>
                   <div>
                     <q-badge :color="getStatusColor(selectedItem.status)" class="q-mr-sm">
@@ -568,6 +580,7 @@
               </div>
 
               <!-- Informasi Sampah -->
+              <!-- Informasi Sampah -->
               <div class="q-mb-lg">
                 <div class="text-subtitle1 text-weight-bold q-mb-sm">Informasi Sampah</div>
                 <q-card flat bordered>
@@ -580,7 +593,7 @@
                       <div class="col-6">
                         <div class="text-caption text-grey-7">Estimasi Volume</div>
                         <div class="text-weight-medium">
-                          {{ selectedItem.estimasi_volume || '-' }}
+                          {{ getDisplayJumlahKarung(selectedItem) }}
                         </div>
                       </div>
                       <div class="col-6">
@@ -589,9 +602,10 @@
                           {{ selectedItem.waktu_pengambilan || '-' }}
                         </div>
                       </div>
-                      <div class="col-6">
+                      <!-- Hapus jumlah karung untuk laporan karena sudah ada di estimasi volume -->
+                      <div class="col-6" v-if="selectedItem.tipe === 'transaksi'">
                         <div class="text-caption text-grey-7">Jumlah Karung</div>
-                        <div class="text-weight-medium">{{ selectedItem.jumlah_karung || 0 }}</div>
+                        <div class="text-weight-medium">{{ selectedItem.total_karung || 0 }}</div>
                       </div>
                     </div>
                   </q-card-section>
@@ -687,6 +701,7 @@
             </div>
 
             <!-- Transaksi Detail -->
+            <!-- Di Detail Dialog untuk Transaksi -->
             <div v-else>
               <!-- Status & Info -->
               <div class="row items-center q-mb-lg">
@@ -729,9 +744,12 @@
                         <div class="text-caption text-grey-7">Metode Bayar</div>
                         <div class="text-weight-medium">{{ selectedItem.metode_bayar || '-' }}</div>
                       </div>
-                      <div class="col-6">
+                      <!-- TAMPILKAN TOTAL_KARUNG UNTUK TRANSAKSI -->
+                      <div class="col-6" v-if="selectedItem.tipe === 'transaksi'">
                         <div class="text-caption text-grey-7">Jumlah Karung</div>
-                        <div class="text-weight-medium">{{ selectedItem.jumlah_karung || 0 }}</div>
+                        <div class="text-weight-medium">
+                          {{ selectedItem.total_karung || 0 }} karung
+                        </div>
                       </div>
                       <div class="col-6">
                         <div class="text-caption text-grey-7">Harga per Karung</div>
@@ -1271,9 +1289,10 @@ const filteredRiwayat = computed(() => {
 })
 
 const totalKarung = computed(() => {
+  // Hanya hitung dari transaksi, bukan dari laporan
   return filteredRiwayat.value
-    .filter((item) => item.tipe === 'laporan')
-    .reduce((total, item) => total + (parseInt(item.jumlah_karung) || 0), 0)
+    .filter((item) => item.tipe === 'transaksi' && item.total_karung)
+    .reduce((total, item) => total + (parseInt(item.total_karung) || 0), 0)
 })
 
 const tampilJudulBulan = computed(() => {
@@ -1321,6 +1340,34 @@ const showDetail = (item) => {
   } else {
     loadTransaksiDetail(item.id)
   }
+}
+
+// Tambahkan fungsi helper
+const formatJumlahKarung = (item) => {
+  if (item.tipe === 'laporan') {
+    // Untuk laporan, tampilkan estimasi_volume (sedikit/sedang/banyak)
+    return item.estimasi_volume || 'Tidak ada estimasi'
+  } else if (item.tipe === 'transaksi') {
+    // Untuk transaksi, tampilkan angka total_karung
+    return item.total_karung ? `${item.total_karung} karung` : 'Tidak ada karung'
+  }
+  return 'Tidak ada data'
+}
+
+// Untuk tampilkan dalam jumlah
+const getDisplayJumlahKarung = (item) => {
+  if (item.tipe === 'laporan') {
+    // Mapping teks estimasi_volume ke deskripsi
+    const estimasiMap = {
+      sedikit: 'Sedikit (1-2 kantong)',
+      sedang: 'Sedang (3-5 kantong)',
+      banyak: 'Banyak (6+ kantong)',
+    }
+    return estimasiMap[item.estimasi_volume] || item.estimasi_volume || 'Tidak ada estimasi'
+  } else if (item.tipe === 'transaksi') {
+    return item.total_karung ? `${item.total_karung} karung` : '-'
+  }
+  return '-'
 }
 
 const loadLaporanDetail = async (id) => {

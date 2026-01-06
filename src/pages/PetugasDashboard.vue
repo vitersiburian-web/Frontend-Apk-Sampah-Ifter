@@ -1,7 +1,13 @@
 <template>
   <q-page class="q-pa-md bg-green-1">
-    <!-- Header dengan Info Jadwal -->
-    <q-card flat class="rounded-borders q-mb-md card-status">
+    <!-- HEADER DASHBOARD -->
+    <div class="q-mb-lg">
+      <div class="text-h4 text-weight-bold text-primary">Dashboard Petugas</div>
+      <div class="text-caption text-grey-7">{{ currentDate }} • Monitor aktivitas dan lokasi</div>
+    </div>
+
+    <!-- JADWAL & STATISTIK -->
+    <q-card flat class="rounded-borders q-mb-md card-status shadow-1">
       <q-card-section class="q-pb-sm">
         <div class="row items-center justify-between">
           <div>
@@ -179,7 +185,7 @@
               <q-item-label caption>{{ task.address }}</q-item-label>
               <q-item-label caption class="text-blue">
                 <q-icon name="recycling" size="xs" />
-                {{ task.jenis_sampah }} • {{ task.jumlah_karung }} karung
+                {{ task.jenis_sampah }} • estimasi {{ task.jumlah_karung }} karung
                 <template v-if="task.estimasi_volume"> • {{ task.estimasi_volume }} </template>
               </q-item-label>
               <q-item-label caption class="text-grey-7 text-caption">
@@ -238,7 +244,7 @@
       </div>
     </q-card>
 
-    <!-- Quick Actions -->
+    <!-- QUICK ACTIONS -->
     <div class="row q-col-gutter-sm q-mb-md">
       <div class="col-4">
         <q-card
@@ -278,8 +284,8 @@
       </div>
     </div>
 
-    <!-- Tombol Aksi Utama -->
-    <q-card flat class="rounded-borders q-mb-xl card-map">
+    <!-- TOMBOL AKSI UTAMA -->
+    <q-card flat class="rounded-borders q-mb-xl card-map shadow-1">
       <q-card-section class="q-pa-md bg-white">
         <div class="text-center q-mb-sm">
           <div class="text-subtitle1 text-weight-bold text-primary">Mulai Pengambilan</div>
@@ -331,9 +337,11 @@ import { useRouter } from 'vue-router'
 import { ref, computed, onMounted } from 'vue'
 import { date, useQuasar } from 'quasar'
 import api from 'src/services/api'
+import { useLocationStore } from 'src/stores/locationStore'
 
 const $q = useQuasar()
 const router = useRouter()
+const locationStore = useLocationStore()
 
 // Data
 const today = new Date()
@@ -365,7 +373,7 @@ const filterOptions = [
 const jadwalDisplay = computed(() => {
   if (jadwalHariIni.value.length === 0) return 'Tidak ada jadwal'
   const jadwal = jadwalHariIni.value[0]
-  return `${jadwal.jam_mulai} - ${jadwal.jam_selesai} (${jadwal.wilayah})`
+  return `${jadwal.jam_mulai} - ${jadwal.jam_seleshi} (${jadwal.wilayah})`
 })
 
 const hasLaporanPending = computed(() => {
@@ -562,7 +570,6 @@ const fetchJadwal = async () => {
   }
 }
 
-// Fetch laporan berdasarkan jadwal - HANYA DATA REAL
 // Fetch laporan berdasarkan jadwal - HANYA DATA REAL, TANPA DEFAULT
 const fetchTugas = async () => {
   try {
@@ -609,7 +616,7 @@ const fetchTugas = async () => {
                 name: nama, // TIDAK ADA DEFAULT 'Pelanggan'
                 address: laporan.alamat_detail || laporan.alamat || '', // Kosong, bukan '-'
                 jenis_sampah: laporan.jenis_sampah || '', // Kosong, bukan 'Campuran'
-                jumlah_karung: laporan.jumlah_karung || 0, // 0, bukan 1
+                jumlah_karung: laporan.estimasi_volume || 0, // 0, bukan 1
                 estimasi_volume: laporan.estimasi_volume || '',
                 status: getStatusDisplay(laporan.status),
                 type: 'laporan',
@@ -639,6 +646,7 @@ const fetchTugas = async () => {
     tugasList.value = [] // Kosongkan jika error
   }
 }
+
 // Helper functions
 const getStatusDisplay = (status) => {
   switch (status) {
@@ -778,6 +786,11 @@ const fetchData = async () => {
 onMounted(() => {
   console.log('🚀 Dashboard mounted')
   fetchData()
+
+  // 🔥 TAMBAHAN INI
+  if (!locationStore.isLive) {
+    locationStore.startTracking()
+  }
 })
 
 // Auto-refresh setiap 30 detik
@@ -837,5 +850,12 @@ setInterval(() => {
 
 .text-xxs {
   font-size: 0.7rem;
+}
+
+/* Shadow untuk card */
+.shadow-1 {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.24);
 }
 </style>
