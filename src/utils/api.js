@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { Notify } from 'quasar'
 
-const API_URL = process.env.API_URL || 'http://127.0.0.1:5000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000'
 
 // Buat instance axios
 const api = axios.create({
