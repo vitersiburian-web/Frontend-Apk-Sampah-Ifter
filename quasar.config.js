@@ -33,7 +33,7 @@ export default defineConfig((/* ctx */) => {
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
       env: {
-        API_URL: 'http://127.0.0.1:5000',
+        API_URL: process.env.API_URL,
       },
       target: {
         browser: ['es2022', 'firefox115', 'chrome115', 'safari14'],
