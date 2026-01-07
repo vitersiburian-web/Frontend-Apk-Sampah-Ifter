@@ -5,21 +5,17 @@
         <!-- Logo/Brand -->
         <q-toolbar-title>
           <q-avatar>
-            <img src="logo.png" alt="Logo">
+            <img src="logo.png" alt="Logo" />
           </q-avatar>
           SPS App
         </q-toolbar-title>
-        
+
         <!-- Spacer -->
         <q-space />
-        
+
         <!-- Notifications -->
-        <notification-system 
-          :user="user"
-          class="q-mr-sm"
-          v-if="user"
-        />
-        
+        <notification-system :user="user" class="q-mr-sm" v-if="user" />
+
         <!-- User Menu -->
         <q-btn flat round dense icon="person">
           <q-menu>
@@ -45,7 +41,7 @@
         </q-btn>
       </q-toolbar>
     </q-header>
-    
+
     <!-- Page Content -->
     <q-page-container>
       <router-view />
@@ -54,7 +50,7 @@
 </template>
 
 <script>
-import { defineComponent, ref, computed } from 'vue'
+import { defineComponent, computed } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import NotificationSystem from 'components/NotificationSystem.vue'
@@ -62,23 +58,23 @@ import NotificationSystem from 'components/NotificationSystem.vue'
 export default defineComponent({
   name: 'MainLayout',
   components: {
-    NotificationSystem
+    NotificationSystem,
   },
   setup() {
     const store = useStore()
     const router = useRouter()
-    
+
     const user = computed(() => store.state.auth.user)
-    
+
     const logout = async () => {
       await store.dispatch('auth/logout')
       router.push('/login')
     }
-    
+
     return {
       user,
-      logout
+      logout,
     }
-  }
+  },
 })
 </script>
