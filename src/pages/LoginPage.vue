@@ -45,7 +45,7 @@
         </q-input>
 
         <div class="text-right q-mb-md">
-          <span class="link" @click="lupaSandi">Lupa Sandi?</span>
+          <span class="link" @click="lupaSandi">Lupa Sandi? Hubungi petugas.</span>
         </div>
 
         <q-btn
@@ -57,14 +57,6 @@
           :loading="loading"
           :disable="loading"
         />
-
-        <div class="q-mt-lg text-center">
-          <div class="text-grey-7 q-mb-sm text-caption">Ada kendala saat masuk?</div>
-          <q-btn flat dense no-caps class="btn-hubungi" @click="goToLaporan" :disable="loading">
-            <q-icon name="support_agent" class="q-mr-xs" size="xs" />
-            Hubungi Admin / Laporkan Masalah
-          </q-btn>
-        </div>
       </q-card>
     </div>
   </div>
