@@ -220,11 +220,6 @@ const lupaSandi = () => {
     timeout: 4000,
   })
 }
-
-// Navigasi ke laporan admin
-const goToLaporan = () => {
-  router.push({ name: 'LaporanAdmin' })
-}
 </script>
 
 <style scoped>
