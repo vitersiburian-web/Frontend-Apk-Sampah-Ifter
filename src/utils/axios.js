@@ -3,7 +3,7 @@ import { jwtDecode } from 'jwt-decode'
 import { Notify } from 'quasar'
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: 'https://spsbackend.pythonanywhere.com/api',
 })
 
 // Request interceptor untuk menambahkan token

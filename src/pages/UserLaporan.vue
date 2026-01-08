@@ -324,7 +324,7 @@ import axios from 'axios'
 
 const route = useRoute()
 //const router = useRouter() // Inisialisasi router
-const API_URL = 'http://localhost:5000'
+const API_URL = 'https://spsbackend.pythonanywhere.com'
 
 // Refs
 const loading = ref(true)

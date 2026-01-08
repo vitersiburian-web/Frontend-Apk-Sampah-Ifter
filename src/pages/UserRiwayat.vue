@@ -1073,9 +1073,12 @@ const getTextColor = (item) => {
 const loadDaftarBulan = async () => {
   loadingBulan.value = true
   try {
-    const res = await axios.get('http://localhost:5000/api/riwayat/user/bulan-tersedia', {
-      headers: getAuthHeaders(),
-    })
+    const res = await axios.get(
+      'https://spsbackend.pythonanywhere.com/api/riwayat/user/bulan-tersedia',
+      {
+        headers: getAuthHeaders(),
+      },
+    )
 
     if (res.data.success) {
       // TAMBAHKAN field 'value' yang sama dengan 'bulan_tahun'
@@ -1143,7 +1146,7 @@ const loadRiwayat = async () => {
 
     console.log('Param yang dikirim:', params) // Debug
 
-    const res = await axios.get('http://localhost:5000/api/riwayat/user', {
+    const res = await axios.get('https://spsbackend.pythonanywhere.com/api/riwayat/user', {
       params,
       headers: getAuthHeaders(),
     })
@@ -1177,7 +1180,7 @@ const loadStats = async () => {
 
     console.log('Param stats:', params) // Debug
 
-    const res = await axios.get('http://localhost:5000/api/riwayat/user/stats', {
+    const res = await axios.get('https://spsbackend.pythonanywhere.com/api/riwayat/user/stats', {
       params,
       headers: getAuthHeaders(),
     })
@@ -1202,9 +1205,12 @@ watch(
 const loadSaldo = async () => {
   try {
     const userId = localStorage.getItem('user_id')
-    const res = await axios.get(`http://localhost:5000/api/warga/by-user/${userId}`, {
-      headers: getAuthHeaders(),
-    })
+    const res = await axios.get(
+      `https://spsbackend.pythonanywhere.com/api/warga/by-user/${userId}`,
+      {
+        headers: getAuthHeaders(),
+      },
+    )
 
     if (res.data.success) {
       saldo.value = parseFloat(res.data.data.saldo) || 0
@@ -1372,7 +1378,7 @@ const getDisplayJumlahKarung = (item) => {
 
 const loadLaporanDetail = async (id) => {
   try {
-    const res = await axios.get(`http://localhost:5000/api/riwayat/laporan/${id}`, {
+    const res = await axios.get(`https://spsbackend.pythonanywhere.com/api/riwayat/laporan/${id}`, {
       headers: getAuthHeaders(),
     })
 
@@ -1388,9 +1394,12 @@ const loadLaporanDetail = async (id) => {
 
 const loadTransaksiDetail = async (id) => {
   try {
-    const res = await axios.get(`http://localhost:5000/api/riwayat/transaksi/${id}`, {
-      headers: getAuthHeaders(),
-    })
+    const res = await axios.get(
+      `https://spsbackend.pythonanywhere.com/api/riwayat/transaksi/${id}`,
+      {
+        headers: getAuthHeaders(),
+      },
+    )
 
     if (res.data.success) {
       selectedItem.value = res.data.data
@@ -1415,7 +1424,7 @@ const batalkanLaporan = async (item) => {
   }).onOk(async () => {
     try {
       const res = await axios.put(
-        `http://localhost:5000/api/riwayat/laporan/${item.id}/batal`,
+        `https://spsbackend.pythonanywhere.com/api/riwayat/laporan/${item.id}/batal`,
         {},
         {
           headers: getAuthHeaders(),
@@ -1442,7 +1451,7 @@ const konfirmasiSelesai = async (item) => {
   }).onOk(async () => {
     try {
       const res = await axios.put(
-        `http://localhost:5000/api/riwayat/laporan/${item.id}/selesai`,
+        `https://spsbackend.pythonanywhere.com/api/riwayat/laporan/${item.id}/selesai`,
         {
           catatan: 'Dikonfirmasi selesai oleh user',
         },
@@ -1476,7 +1485,7 @@ const doExport = async () => {
     if (bulanDipilih.value) params.bulan = bulanDipilih.value
 
     // Note: You'll need to implement the export endpoint
-    // const res = await axios.get('http://localhost:5000/api/riwayat/export', {
+    // const res = await axios.get('https://spsbackend.pythonanywhere.com/api/riwayat/export', {
     //   params,
     //   headers: getAuthHeaders(),
     //   responseType: 'blob'
